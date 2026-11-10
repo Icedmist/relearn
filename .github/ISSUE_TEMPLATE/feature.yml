@@ -1,0 +1,39 @@
+---
+name: Feature request
+description: Propose a capability with acceptance criteria
+title: "feat: "
+labels: ["feature", "triage"]
+assignees: []
+---
+
+## Problem
+
+What user problem does this solve? Who is affected (admin, collector, beneficiary)?
+
+## User story
+
+As a **role**, I want **capability**, so that **outcome**.
+
+## Acceptance criteria
+
+- [ ] 
+- [ ] 
+- [ ] 
+
+## Screens and routes
+
+List affected screens, e.g. `/admin/beneficiaries/new`.
+
+## Data and security impact
+
+- Tables / RPCs touched:
+- RLS or permission changes:
+- Personal data involved (especially children's):
+
+## Stage
+
+Stage 1 / 2 / 3 / 4 (see `docs/PRD.md`).
+
+## Notes
+
+Links, sketches or references.

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" width="640" height="160" role="img" aria-label="ReLearn — Recycle to Learn">
+  <title>ReLearn — Recycle to Learn</title>
+  <rect x="12" y="12" width="136" height="136" rx="32" fill="#2E9E5B"/>
+  <g transform="translate(12 12) scale(0.5667)">
+    <path d="M58 140 C58 48 182 48 182 140" fill="none" stroke="#FBF7EC" stroke-width="14" stroke-linecap="round"/>
+    <path d="M182 158 L168 134 L196 134 Z" fill="#FBF7EC"/>
+    <path d="M120 136 C109 122 112 106 127 99 C129 114 127 128 120 136 Z" fill="#F2B441"/>
+    <path d="M70 158 C88 148 106 150 118 160 L118 198 C106 188 88 186 70 196 Z" fill="#FBF7EC"/>
+    <path d="M170 158 C152 148 134 150 122 160 L122 198 C134 188 152 186 170 196 Z" fill="#FBF7EC"/>
+  </g>
+  <text x="176" y="84" font-family="Inter, Segoe UI, Roboto, Arial, sans-serif" font-size="58" font-weight="700" fill="#14532D" letter-spacing="-2">Re<tspan fill="#2E9E5B">Learn</tspan></text>
+  <text x="178" y="116" font-family="Inter, Segoe UI, Roboto, Arial, sans-serif" font-size="20" font-weight="500" fill="#6B7280" letter-spacing="0.5">Recycle to Learn.</text>
+</svg>

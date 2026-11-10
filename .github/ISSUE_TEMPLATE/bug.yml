@@ -1,0 +1,37 @@
+---
+name: Bug report
+about: Report something that does not work as specified
+title: "fix: "
+labels: ["bug", "triage"]
+assignees: []
+---
+
+## What happened
+
+A clear description of the bug.
+
+## Expected behaviour
+
+What the PRD or screen spec says should happen.
+
+## Steps to reproduce
+
+1. 
+2. 
+3. 
+
+## Environment
+
+- App version / commit:
+- Role: admin / collector / beneficiary
+- Route or screen:
+- Device and Android version, or browser:
+- Online or offline:
+
+## Evidence
+
+Screenshots, screen recording or logs. **Do not include real pupil data.**
+
+## Possible cause
+
+Optional.
