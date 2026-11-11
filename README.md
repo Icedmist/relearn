@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/Icedmist/relearn/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Icedmist/relearn/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-stage%200%20scaffold-2E9E5B"></a>
+  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-stage%201%20full--stack-2E9E5B"></a>
   <a href="#stack"><img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B"></a>
   <a href="#stack"><img alt="Supabase" src="https://img.shields.io/badge/Backend-Supabase-3ECF8E"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -24,9 +24,10 @@ dashboard of schools, beneficiaries, materials, points and rewards.
 **One printed card is the whole identity.** No app, no login and no data plan for
 the pupil. The collector's Android phone does the work; Postgres keeps the truth.
 
-> **Status:** Stage 0 — a fully clickable Flutter scaffold with demo data, the
-> complete screen map, brand system, Supabase schema and product documentation.
-> Supabase, camera scanning, PDF cards and the offline queue land in Stages 1–3.
+> **Status:** Stage 1 — full-stack Supabase. Live email/password auth, a real
+> Postgres schema with RLS, server-side points and redemption RPCs, a staff
+> directory, and an educational supplies catalogue. Camera scanning, PDF cards
+> and the offline queue remain for Stages 2–3.
 
 ---
 
@@ -225,14 +226,27 @@ flutter run -d chrome        # admin + collector in the browser
 flutter run -d <android-id>  # collector app
 ```
 
-No credentials are needed: the app runs in demo mode with seeded data.
+No credentials are needed: the app falls back to demo mode.
+
+### Run against Supabase
+
+Copy `.env.example` to `.env`, fill in the project URL and **publishable** key,
+then run with the define file (`.env` is gitignored):
+
+```bash
+cp .env.example .env
+flutter run -d chrome --dart-define-from-file=.env
+```
+
+Live mode turns on automatically when credentials are present. Set
+`DEMO_MODE=true` in `.env` to force the in-memory store.
 
 ### Checks
 
 ```bash
 flutter analyze
 flutter test
-flutter build web --release
+flutter build web --debug
 ```
 
 ---
@@ -240,7 +254,7 @@ flutter build web --release
 ## Supabase setup
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Apply the schema and seed:
+2. Apply the migrations and seed:
 
 ```bash
 supabase link --project-ref <ref>
@@ -248,7 +262,17 @@ supabase db push
 psql "$DATABASE_URL" -f supabase/seed.sql
 ```
 
-3. Create the first admin user, then promote the profile:
+Migrations:
+
+| File | Purpose |
+|---|---|
+| `0001_init.sql` | Schema, enums, indexes, balance view, ledger, RLS and RPCs |
+| `0002_staff_directory.sql` | Staff directory view, hardened signup, atomic restock |
+| `0003_educational_catalogue.sql` | School supplies catalogue and point costs |
+| `0004_item_images.sql` | Public `item-images` bucket, admin-only writes, `image_url` columns |
+
+3. Create the first admin user in **Authentication → Users**, then promote the
+   profile. Every self-signup starts as a collector; admins are explicit:
 
 ```sql
 update public.profiles set role = 'admin' where id = '<auth-user-id>';
@@ -257,25 +281,30 @@ update public.profiles set role = 'admin' where id = '<auth-user-id>';
 4. Run the app with credentials:
 
 ```bash
-flutter run -d chrome \
-  --dart-define=SUPABASE_URL=https://<ref>.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=<anon-key> \
-  --dart-define=DEMO_MODE=false
+cp .env.example .env
+flutter run -d chrome --dart-define-from-file=.env
 ```
 
-The **anon key is safe to ship** because RLS enforces access. Never put the
-**service-role key** in the app. See [`.env.example`](.env.example).
+The **publishable/anon key is safe to ship** because RLS enforces access. The
+**secret/service-role key** bypasses RLS: keep it server-side only, never in the
+app or repository. See [`.env.example`](.env.example).
+
+### Item images
+
+`0004_item_images.sql` creates a public-read `item-images` bucket (5 MB limit;
+PNG, JPEG, WebP). Only active admins can upload, replace or delete files, which
+RLS checks through `public.is_admin()`. Upload from **Storage → item-images** or
+through `SupabaseRepository.uploadItemImage`, then save the returned public URL
+to `materials.image_url` or `rewards.image_url`.
 
 ### Build and deploy
 
 ```bash
 # Web admin
-flutter build web --release \
-  --dart-define=SUPABASE_URL=... \
-  --dart-define=SUPABASE_ANON_KEY=...
+flutter build web --release --dart-define-from-file=.env
 
 # Android
-flutter build appbundle --release
+flutter build appbundle --release --dart-define-from-file=.env
 ```
 
 Vercel: build command `flutter build web`, output `build/web`, add a rewrite to
@@ -320,9 +349,12 @@ beneficiaries 1──* points_ledger            balance = Σ ledger.points
 | `beneficiaries` | Pupils and teachers with a public ID |
 | `materials` | Accepted materials, units and rates |
 | `collections` / `collection_items` | Collection header and rate-snapshotted lines |
-| `rewards` / `redemptions` | Catalogue, stock and redemptions |
+| `rewards` / `redemptions` | Educational supplies catalogue, stock and redemptions |
 | `points_ledger` | Append-only earn / redeem / adjust / void entries |
 | `beneficiary_balances` | Derived balance view |
+
+Item photos live in the public `item-images` Storage bucket; `materials` and
+`rewards` carry an `image_url`.
 
 Full detail: [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) and
 [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).

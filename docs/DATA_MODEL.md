@@ -73,6 +73,7 @@ Mirrors `auth.users`; created by trigger on signup.
 | points_per_unit | numeric(10,2) | current rate |
 | allowed | boolean | server rejects `false` |
 | active | boolean | hidden from pickers when false |
+| image_url | text | public URL from the `item-images` bucket |
 
 ### `collections`
 
@@ -108,6 +109,7 @@ Mirrors `auth.users`; created by trigger on signup.
 | points_cost | integer | > 0 |
 | stock | integer | ≥ 0, decremented in the redemption transaction |
 | active | boolean | |
+| image_url | text | public URL from the `item-images` bucket |
 
 ### `redemptions`
 
@@ -213,8 +215,20 @@ reversing ledger entry, so the ledger sum always matches the displayed balance.
 
 - [`../supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql) —
   schema, enums, views, RLS, RPCs, triggers.
+- [`../supabase/migrations/0002_staff_directory.sql`](../supabase/migrations/0002_staff_directory.sql) —
+  staff directory, hardened signup, atomic restock.
+- [`../supabase/migrations/0003_educational_catalogue.sql`](../supabase/migrations/0003_educational_catalogue.sql) —
+  educational supplies and point costs.
+- [`../supabase/migrations/0004_item_images.sql`](../supabase/migrations/0004_item_images.sql) —
+  `item-images` Storage bucket, admin-only writes and `image_url` columns.
 - [`../supabase/seed.sql`](../supabase/seed.sql) — starting materials, rewards and
   a demo school.
+
+### Storage
+
+`item-images` is a public-read bucket for catalogue photos, capped at 5 MB per
+file (PNG, JPEG, WebP). Writes are limited to active admins by RLS on
+`storage.objects`. Item rows store the public URL in `image_url`.
 
 Apply locally with the Supabase CLI:
 

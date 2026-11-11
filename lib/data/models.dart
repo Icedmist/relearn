@@ -106,6 +106,7 @@ class MaterialItem {
     required this.pointsPerUnit,
     required this.allowed,
     required this.active,
+    this.imageUrl,
   });
 
   final String id;
@@ -114,16 +115,22 @@ class MaterialItem {
   final double pointsPerUnit;
   final bool allowed;
   final bool active;
+  final String? imageUrl;
 
-  MaterialItem copyWith({double? pointsPerUnit, bool? allowed, bool? active}) =>
-      MaterialItem(
-        id: id,
-        name: name,
-        unit: unit,
-        pointsPerUnit: pointsPerUnit ?? this.pointsPerUnit,
-        allowed: allowed ?? this.allowed,
-        active: active ?? this.active,
-      );
+  MaterialItem copyWith({
+    double? pointsPerUnit,
+    bool? allowed,
+    bool? active,
+    String? imageUrl,
+  }) => MaterialItem(
+    id: id,
+    name: name,
+    unit: unit,
+    pointsPerUnit: pointsPerUnit ?? this.pointsPerUnit,
+    allowed: allowed ?? this.allowed,
+    active: active ?? this.active,
+    imageUrl: imageUrl ?? this.imageUrl,
+  );
 }
 
 class Reward {
@@ -133,6 +140,7 @@ class Reward {
     required this.pointsCost,
     required this.stock,
     required this.active,
+    this.imageUrl,
   });
 
   final String id;
@@ -140,14 +148,42 @@ class Reward {
   final int pointsCost;
   final int stock;
   final bool active;
+  final String? imageUrl;
 
-  Reward copyWith({int? pointsCost, int? stock, bool? active}) => Reward(
+  Reward copyWith({
+    int? pointsCost,
+    int? stock,
+    bool? active,
+    String? imageUrl,
+  }) => Reward(
     id: id,
     name: name,
     pointsCost: pointsCost ?? this.pointsCost,
     stock: stock ?? this.stock,
     active: active ?? this.active,
+    imageUrl: imageUrl ?? this.imageUrl,
   );
+}
+
+class StaffUser {
+  const StaffUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.active,
+    this.lastActive,
+  });
+
+  final String id;
+  final String name;
+  final String email;
+  final String role;
+  final bool active;
+  final DateTime? lastActive;
+
+  bool get isAdmin => role == 'admin';
+  String get roleLabel => isAdmin ? 'Admin' : 'Collector';
 }
 
 class LedgerEntry {

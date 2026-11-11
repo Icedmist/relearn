@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 
 class RegisterBeneficiaryScreen extends ConsumerStatefulWidget {
@@ -36,8 +36,8 @@ class _RegisterBeneficiaryScreenState
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final created = ref
-        .read(demoStoreProvider.notifier)
+    final created = await ref
+        .read(appStoreProvider.notifier)
         .addBeneficiary(
           name: _name.text.trim(),
           type: _type,
@@ -49,6 +49,14 @@ class _RegisterBeneficiaryScreenState
         );
 
     if (!mounted) return;
+    if (created == null) {
+      final error =
+          ref.read(appStoreProvider).error ??
+          'Could not register the beneficiary.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -121,7 +129,7 @@ class _RegisterBeneficiaryScreenState
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(demoStoreProvider);
+    final state = ref.watch(appStoreProvider);
     final activeSchools = state.schools.where((s) => s.active).toList();
 
     return Column(

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 
 class RewardsScreen extends ConsumerWidget {
@@ -11,7 +11,7 @@ class RewardsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(demoStoreProvider);
+    final state = ref.watch(appStoreProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,7 +139,7 @@ class RewardsScreen extends ConsumerWidget {
             onPressed: () {
               final value = int.tryParse(qty.text);
               if (value == null || value <= 0) return;
-              ref.read(demoStoreProvider.notifier).restock(reward.id, value);
+              ref.read(appStoreProvider.notifier).restock(reward.id, value);
               Navigator.pop(dialogContext);
             },
             child: const Text('Add stock'),
@@ -173,7 +173,7 @@ class RewardsScreen extends ConsumerWidget {
               final value = int.tryParse(cost.text);
               if (value == null || value <= 0) return;
               ref
-                  .read(demoStoreProvider.notifier)
+                  .read(appStoreProvider.notifier)
                   .updateReward(reward.id, pointsCost: value);
               Navigator.pop(dialogContext);
             },
@@ -225,7 +225,7 @@ class RewardsScreen extends ConsumerWidget {
             onPressed: () {
               if (name.text.trim().isEmpty) return;
               ref
-                  .read(demoStoreProvider.notifier)
+                  .read(appStoreProvider.notifier)
                   .addReward(
                     name: name.text.trim(),
                     pointsCost: int.tryParse(cost.text) ?? 50,

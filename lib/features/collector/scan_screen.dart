@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
@@ -23,14 +23,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   }
 
   void _simulateScan() {
-    final state = ref.read(demoStoreProvider);
+    final state = ref.read(appStoreProvider);
     if (state.beneficiaries.isEmpty) return;
     _found(state.beneficiaries.first.id);
   }
 
   void _manualEntry() {
     final controller = TextEditingController();
-    final state = ref.read(demoStoreProvider);
+    final state = ref.read(appStoreProvider);
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(

@@ -1,11 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/config/app_config.dart';
 import 'models.dart';
+import 'supabase_repository.dart';
 
-/// Demo state powers the clickable Stage 0 scaffold. Swap this for a Supabase
-/// repository in Stage 1 without changing the screens.
-class DemoState {
-  const DemoState({
+/// Single in-memory snapshot consumed by every screen. In demo mode it is
+/// seeded locally; in live mode it is loaded from Supabase through
+/// [SupabaseRepository] and refreshed after every write.
+class AppState {
+  const AppState({
     required this.schools,
     required this.beneficiaries,
     required this.materials,
@@ -13,6 +18,10 @@ class DemoState {
     required this.ledger,
     required this.collections,
     required this.redemptions,
+    this.users = const [],
+    this.profile,
+    this.loading = false,
+    this.error,
   });
 
   final List<School> schools;
@@ -22,8 +31,24 @@ class DemoState {
   final List<LedgerEntry> ledger;
   final List<CollectionRecord> collections;
   final List<RedemptionRecord> redemptions;
+  final List<StaffUser> users;
+  final StaffUser? profile;
+  final bool loading;
+  final String? error;
 
-  DemoState copyWith({
+  static const empty = AppState(
+    schools: [],
+    beneficiaries: [],
+    materials: [],
+    rewards: [],
+    ledger: [],
+    collections: [],
+    redemptions: [],
+  );
+
+  bool get isLive => !AppConfig.demoMode;
+
+  AppState copyWith({
     List<School>? schools,
     List<Beneficiary>? beneficiaries,
     List<MaterialItem>? materials,
@@ -31,7 +56,12 @@ class DemoState {
     List<LedgerEntry>? ledger,
     List<CollectionRecord>? collections,
     List<RedemptionRecord>? redemptions,
-  }) => DemoState(
+    List<StaffUser>? users,
+    StaffUser? profile,
+    bool? loading,
+    String? error,
+    bool clearError = false,
+  }) => AppState(
     schools: schools ?? this.schools,
     beneficiaries: beneficiaries ?? this.beneficiaries,
     materials: materials ?? this.materials,
@@ -39,6 +69,10 @@ class DemoState {
     ledger: ledger ?? this.ledger,
     collections: collections ?? this.collections,
     redemptions: redemptions ?? this.redemptions,
+    users: users ?? this.users,
+    profile: profile ?? this.profile,
+    loading: loading ?? this.loading,
+    error: clearError ? null : (error ?? this.error),
   );
 
   Beneficiary? beneficiaryById(String id) {
@@ -95,7 +129,7 @@ class DemoState {
       ledger.where((l) => l.beneficiaryId == beneficiaryId).toList()
         ..sort((a, b) => b.at.compareTo(a.at));
 
-  static DemoState seed() {
+  static AppState seed() {
     final now = DateTime.now();
     DateTime ago(Duration d) => now.subtract(d);
 
@@ -260,6 +294,111 @@ class DemoState {
         name: 'School backpack',
         pointsCost: 400,
         stock: 6,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-4',
+        name: 'Eraser',
+        pointsCost: 15,
+        stock: 300,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-5',
+        name: 'Pencil sharpener',
+        pointsCost: 15,
+        stock: 300,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-6',
+        name: '30 cm ruler',
+        pointsCost: 25,
+        stock: 200,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-7',
+        name: 'Blue ballpoint pen',
+        pointsCost: 30,
+        stock: 300,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-8',
+        name: 'HB pencil (pack of 3)',
+        pointsCost: 50,
+        stock: 200,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-9',
+        name: 'Drawing book',
+        pointsCost: 90,
+        stock: 80,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-10',
+        name: 'Crayons (8 colours)',
+        pointsCost: 110,
+        stock: 80,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-11',
+        name: 'Coloured pencils (12)',
+        pointsCost: 120,
+        stock: 80,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-12',
+        name: 'Geometry set',
+        pointsCost: 180,
+        stock: 40,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-13',
+        name: 'Lunch box',
+        pointsCost: 220,
+        stock: 20,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-14',
+        name: 'Water bottle',
+        pointsCost: 250,
+        stock: 30,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-15',
+        name: 'Atlas',
+        pointsCost: 300,
+        stock: 10,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-16',
+        name: 'Exercise book (pack of 5)',
+        pointsCost: 350,
+        stock: 40,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-17',
+        name: 'Oxford school dictionary',
+        pointsCost: 350,
+        stock: 20,
+        active: true,
+      ),
+      Reward(
+        id: 'rew-18',
+        name: 'Scientific calculator',
+        pointsCost: 500,
+        stock: 15,
         active: true,
       ),
     ];
@@ -427,7 +566,7 @@ class DemoState {
       ),
     ];
 
-    return DemoState(
+    return AppState(
       schools: schools,
       beneficiaries: beneficiaries,
       materials: materials,
@@ -439,27 +578,91 @@ class DemoState {
   }
 }
 
-class DemoStore extends Notifier<DemoState> {
+class AppStore extends Notifier<AppState> {
   @override
-  DemoState build() => DemoState.seed();
+  AppState build() {
+    if (AppConfig.demoMode) return AppState.seed();
+    // Kick off the first remote load without blocking the first frame.
+    Future<void>(() => reload());
+    return AppState.empty.copyWith(loading: true);
+  }
+
+  SupabaseRepository? get _repo =>
+      AppConfig.demoMode ? null : SupabaseRepository.instance;
+
+  Future<void> reload({bool showLoading = true}) async {
+    final repo = _repo;
+    if (repo == null) return;
+    state = state.copyWith(loading: showLoading, clearError: showLoading);
+    try {
+      final data = await repo.loadAll();
+      state = AppState(
+        schools: data.schools,
+        beneficiaries: data.beneficiaries,
+        materials: data.materials,
+        rewards: data.rewards,
+        ledger: data.ledger,
+        collections: data.collections,
+        redemptions: data.redemptions,
+        users: data.users,
+        profile: data.profile,
+      );
+    } catch (error) {
+      _fail(error);
+    }
+  }
+
+  void clearError() {
+    state = state.copyWith(clearError: true);
+  }
+
+  void _fail(Object error) {
+    debugPrint('ReLearn data error: $error');
+    state = state.copyWith(loading: false, error: _message(error));
+  }
+
+  String _message(Object error) => switch (error) {
+    PostgrestException(:final message) => message,
+    AuthException(:final message) => message,
+    _ => '$error',
+  };
+
+  Future<void> _write(Future<dynamic> action) async {
+    try {
+      await action;
+      await reload(showLoading: false);
+    } catch (error) {
+      _fail(error);
+      await reload(showLoading: false);
+    }
+  }
 
   void addSchool({required String name, required String address}) {
-    final school = School(
-      id: 'sch-${state.schools.length + 1}',
-      name: name,
-      address: address,
-      active: true,
-    );
-    state = state.copyWith(schools: [...state.schools, school]);
+    final repo = _repo;
+    if (repo == null) {
+      final school = School(
+        id: 'sch-${state.schools.length + 1}',
+        name: name,
+        address: address,
+        active: true,
+      );
+      state = state.copyWith(schools: [...state.schools, school]);
+      return;
+    }
+    _write(repo.addSchool(name: name, address: address));
   }
 
   void toggleSchool(String id) {
+    final school = state.schoolById(id);
+    if (school == null) return;
     state = state.copyWith(
       schools: [
         for (final s in state.schools)
           if (s.id == id) s.copyWith(active: !s.active) else s,
       ],
     );
+    final repo = _repo;
+    if (repo != null) _write(repo.setSchoolActive(id, !school.active));
   }
 
   void renameSchool(
@@ -473,15 +676,39 @@ class DemoStore extends Notifier<DemoState> {
           if (s.id == id) s.copyWith(name: name, address: address) else s,
       ],
     );
+    final repo = _repo;
+    if (repo != null) {
+      _write(repo.renameSchool(id, name: name, address: address));
+    }
   }
 
-  Beneficiary addBeneficiary({
+  Future<Beneficiary?> addBeneficiary({
     required String name,
     required BeneficiaryType type,
     required String schoolId,
     required String className,
     String? guardianPhone,
-  }) {
+  }) async {
+    final repo = _repo;
+    if (repo != null) {
+      try {
+        final beneficiary = await repo.addBeneficiary(
+          name: name,
+          type: type,
+          schoolId: schoolId,
+          className: className,
+          guardianPhone: guardianPhone,
+        );
+        state = state.copyWith(
+          beneficiaries: [...state.beneficiaries, beneficiary],
+        );
+        return beneficiary;
+      } catch (error) {
+        _fail(error);
+        return null;
+      }
+    }
+
     final n = state.beneficiaries.length + 50;
     final suffix = [
       '7K3Q',
@@ -516,6 +743,29 @@ class DemoStore extends Notifier<DemoState> {
           if (b.id == id) b.copyWith(cardBlocked: blocked) else b,
       ],
     );
+    final repo = _repo;
+    if (repo != null) _write(repo.setCardBlocked(id, blocked));
+  }
+
+  void setStaffActive(String id, bool active) {
+    state = state.copyWith(
+      users: [
+        for (final u in state.users)
+          if (u.id == id)
+            StaffUser(
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              role: u.role,
+              active: active,
+              lastActive: u.lastActive,
+            )
+          else
+            u,
+      ],
+    );
+    final repo = _repo;
+    if (repo != null) _write(repo.setStaffActive(id, active));
   }
 
   void addMaterial({
@@ -523,18 +773,25 @@ class DemoStore extends Notifier<DemoState> {
     required MaterialUnit unit,
     required double pointsPerUnit,
   }) {
-    state = state.copyWith(
-      materials: [
-        ...state.materials,
-        MaterialItem(
-          id: 'mat-${state.materials.length + 1}',
-          name: name,
-          unit: unit,
-          pointsPerUnit: pointsPerUnit,
-          allowed: true,
-          active: true,
-        ),
-      ],
+    final repo = _repo;
+    if (repo == null) {
+      state = state.copyWith(
+        materials: [
+          ...state.materials,
+          MaterialItem(
+            id: 'mat-${state.materials.length + 1}',
+            name: name,
+            unit: unit,
+            pointsPerUnit: pointsPerUnit,
+            allowed: true,
+            active: true,
+          ),
+        ],
+      );
+      return;
+    }
+    _write(
+      repo.addMaterial(name: name, unit: unit, pointsPerUnit: pointsPerUnit),
     );
   }
 
@@ -543,18 +800,23 @@ class DemoStore extends Notifier<DemoState> {
     required int pointsCost,
     required int stock,
   }) {
-    state = state.copyWith(
-      rewards: [
-        ...state.rewards,
-        Reward(
-          id: 'rew-${state.rewards.length + 1}',
-          name: name,
-          pointsCost: pointsCost,
-          stock: stock,
-          active: true,
-        ),
-      ],
-    );
+    final repo = _repo;
+    if (repo == null) {
+      state = state.copyWith(
+        rewards: [
+          ...state.rewards,
+          Reward(
+            id: 'rew-${state.rewards.length + 1}',
+            name: name,
+            pointsCost: pointsCost,
+            stock: stock,
+            active: true,
+          ),
+        ],
+      );
+      return;
+    }
+    _write(repo.addReward(name: name, pointsCost: pointsCost, stock: stock));
   }
 
   void updateMaterial(
@@ -576,6 +838,17 @@ class DemoStore extends Notifier<DemoState> {
             m,
       ],
     );
+    final repo = _repo;
+    if (repo != null) {
+      _write(
+        repo.updateMaterial(
+          id,
+          pointsPerUnit: pointsPerUnit,
+          allowed: allowed,
+          active: active,
+        ),
+      );
+    }
   }
 
   void updateReward(String id, {int? pointsCost, int? stock, bool? active}) {
@@ -588,21 +861,52 @@ class DemoStore extends Notifier<DemoState> {
             r,
       ],
     );
+    final repo = _repo;
+    if (repo != null) {
+      _write(
+        repo.updateReward(
+          id,
+          pointsCost: pointsCost,
+          stock: stock,
+          active: active,
+        ),
+      );
+    }
   }
 
   void restock(String id, int qty) {
     final reward = state.rewardById(id);
     if (reward == null) return;
     updateReward(id, stock: reward.stock + qty);
+    final repo = _repo;
+    if (repo != null) _write(repo.restock(id, qty));
   }
 
-  int recordCollection({
+  /// Credits a collection and returns the points, or null when the server
+  /// rejected the write.
+  Future<int?> recordCollection({
     required String beneficiaryId,
     required List<({MaterialItem material, double quantity})> lines,
     String? note,
-  }) {
+  }) async {
+    final repo = _repo;
+    if (repo != null) {
+      try {
+        final points = await repo.recordCollection(
+          beneficiaryId: beneficiaryId,
+          lines: lines,
+          note: note,
+        );
+        await reload(showLoading: false);
+        return points;
+      } catch (error) {
+        _fail(error);
+        return null;
+      }
+    }
+
     final beneficiary = state.beneficiaryById(beneficiaryId);
-    if (beneficiary == null) return 0;
+    if (beneficiary == null) return null;
 
     var total = 0;
     final parts = <String>[];
@@ -620,7 +924,7 @@ class DemoStore extends Notifier<DemoState> {
     final collection = CollectionRecord(
       id: id,
       beneficiaryId: beneficiaryId,
-      collectorName: 'Abdullahi A.',
+      collectorName: state.profile?.name ?? 'Abdullahi A.',
       summary: parts.join(' + '),
       kg: lines
           .where((l) => l.material.unit == MaterialUnit.kg)
@@ -652,11 +956,22 @@ class DemoStore extends Notifier<DemoState> {
   }
 
   /// Returns an error message, or null on success.
-  String? redeem({
+  Future<String?> redeem({
     required String beneficiaryId,
     required String rewardId,
     required int qty,
-  }) {
+  }) async {
+    final repo = _repo;
+    if (repo != null) {
+      final error = await repo.redeem(
+        beneficiaryId: beneficiaryId,
+        rewardId: rewardId,
+        qty: qty,
+      );
+      if (error == null) await reload(showLoading: false);
+      return error;
+    }
+
     final beneficiary = state.beneficiaryById(beneficiaryId);
     final reward = state.rewardById(rewardId);
     if (beneficiary == null) return 'Beneficiary not found.';
@@ -675,7 +990,7 @@ class DemoStore extends Notifier<DemoState> {
     final redemption = RedemptionRecord(
       id: 'red-${state.redemptions.length + 1}',
       beneficiaryId: beneficiaryId,
-      collectorName: 'Abdullahi A.',
+      collectorName: state.profile?.name ?? 'Abdullahi A.',
       rewardName: reward.name,
       qty: qty,
       points: cost,
@@ -730,7 +1045,9 @@ class DemoStore extends Notifier<DemoState> {
         ...state.ledger,
       ],
     );
+    final repo = _repo;
+    if (repo != null) _write(repo.adjustPoints(beneficiaryId, points, reason));
   }
 }
 
-final demoStoreProvider = NotifierProvider<DemoStore, DemoState>(DemoStore.new);
+final appStoreProvider = NotifierProvider<AppStore, AppState>(AppStore.new);

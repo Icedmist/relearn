@@ -7,10 +7,40 @@ All notable changes to ReLearn are documented here. Format follows
 ## [Unreleased]
 
 ### Planned
-- Stage 1: Supabase auth and persistence, schools, beneficiaries, QR cards, PDF export.
 - Stage 2: camera scanning, offline queue, sync status.
-- Stage 3: server points engine and atomic redemption.
-- Stage 4: live dashboard queries, filters, CSV reports.
+- Stage 3: PDF card export and printable batches.
+
+## [0.2.0] — 2026-11-12
+
+### Added
+- Live Supabase backend: email/password auth, session restore, password reset
+  and a router guard that redirects signed-out users to login.
+- SQL migrations for the schema, staff directory, educational supplies
+  catalogue and item-image storage; all applied to the hosted project.
+- `SupabaseRepository` for loading and writing schools, beneficiaries,
+  materials, rewards, ledger, collections, redemptions and staff.
+- Server-side RPCs for collections, redemption, point adjustments and restock.
+- Staff directory view: admins see every account, collectors see only
+  themselves; self-signup always creates a collector.
+- Admin Users screen with live roles, last-active time, deactivate/reactivate
+  and password-reset email.
+- Educational supplies catalogue with 18 rewards and point costs, from an
+  eraser (15 pts) to a scientific calculator (500 pts).
+- Public-read `item-images` Storage bucket (5 MB; PNG/JPEG/WebP) with
+  admin-only writes and `image_url` columns on materials and rewards.
+- `.env.example` and `--dart-define-from-file=.env` workflow; `.env` stays
+  gitignored.
+
+### Changed
+- `DemoState`/`DemoStore` renamed to `AppState`/`AppStore`; the same snapshot
+  now serves demo and live data.
+- Live mode turns on automatically when Supabase credentials are present;
+  `DEMO_MODE=true` forces the in-memory store.
+- Admin and collector shells show live/demo status, the signed-in profile,
+  a loading bar, an error banner and a working sign-out.
+- Collections and redemptions are asynchronous and surface server errors.
+- CI remains pinned to Flutter 3.47.9; local validation runs tests and a debug
+  web build.
 
 ## [0.1.2] — 2026-11-11
 
@@ -46,7 +76,8 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Icedmist/relearn/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Icedmist/relearn/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Icedmist/relearn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Icedmist/relearn/releases/tag/v0.1.0

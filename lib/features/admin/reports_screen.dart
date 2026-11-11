@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 
 enum _ReportTab { collections, redemptions, ledger }
@@ -21,7 +21,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(demoStoreProvider);
+    final state = ref.watch(appStoreProvider);
     final schoolBeneficiaries = state.beneficiaries
         .where((b) => _schoolId == 'all' || b.schoolId == _schoolId)
         .map((b) => b.id)
@@ -188,7 +188,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   List<Widget> _collectionRows(
     BuildContext context,
-    DemoState state,
+    AppState state,
     List<CollectionRecord> list,
   ) {
     if (list.isEmpty) {
@@ -219,7 +219,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   List<Widget> _redemptionRows(
     BuildContext context,
-    DemoState state,
+    AppState state,
     List<RedemptionRecord> list,
   ) {
     if (list.isEmpty) {
@@ -249,7 +249,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   List<Widget> _ledgerRows(
     BuildContext context,
-    DemoState state,
+    AppState state,
     List<LedgerEntry> list,
   ) {
     final sorted = [...list]..sort((a, b) => b.at.compareTo(a.at));

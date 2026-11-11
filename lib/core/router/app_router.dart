@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/config/app_config.dart';
 import '../../features/admin/admin_shell.dart';
 import '../../features/admin/beneficiaries_screen.dart';
 import '../../features/admin/beneficiary_profile_screen.dart';
@@ -27,6 +29,10 @@ final appRouter = GoRouter(
   redirect: (context, state) {
     if (state.uri.path == '/admin') return '/admin/dashboard';
     if (state.uri.path == '/collector') return '/collector/home';
+    if (!AppConfig.demoMode) {
+      final signedIn = Supabase.instance.client.auth.currentSession != null;
+      if (!signedIn && state.uri.path != '/login') return '/login';
+    }
     return null;
   },
   routes: [
