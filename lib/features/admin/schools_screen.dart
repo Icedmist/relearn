@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 
 class SchoolsScreen extends ConsumerStatefulWidget {
@@ -19,7 +19,7 @@ class _SchoolsScreenState extends ConsumerState<SchoolsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(demoStoreProvider);
+    final state = ref.watch(appStoreProvider);
     final schools = state.schools
         .where((s) => s.name.toLowerCase().contains(_query.toLowerCase()))
         .toList();
@@ -77,7 +77,7 @@ class _SchoolsScreenState extends ConsumerState<SchoolsScreen> {
                         .fold(0, (s, b) => s + b.balance),
                     onToggle: () {
                       ref
-                          .read(demoStoreProvider.notifier)
+                          .read(appStoreProvider.notifier)
                           .toggleSchool(school.id);
                     },
                     onOpen: () => context.go('/admin/beneficiaries'),
@@ -124,7 +124,7 @@ class _SchoolsScreenState extends ConsumerState<SchoolsScreen> {
             onPressed: () {
               if (name.text.trim().isEmpty) return;
               ref
-                  .read(demoStoreProvider.notifier)
+                  .read(appStoreProvider.notifier)
                   .addSchool(
                     name: name.text.trim(),
                     address: address.text.trim(),
@@ -171,7 +171,7 @@ class _SchoolsScreenState extends ConsumerState<SchoolsScreen> {
             onPressed: () {
               if (name.text.trim().isEmpty) return;
               ref
-                  .read(demoStoreProvider.notifier)
+                  .read(appStoreProvider.notifier)
                   .renameSchool(
                     school.id,
                     name: name.text.trim(),

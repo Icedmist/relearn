@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 
 class RecordCollectionScreen extends ConsumerStatefulWidget {
@@ -25,7 +25,7 @@ class _RecordCollectionScreenState
   void initState() {
     super.initState();
     final materials = ref
-        .read(demoStoreProvider)
+        .read(appStoreProvider)
         .materials
         .where((m) => m.allowed && m.active)
         .toList();
@@ -50,7 +50,7 @@ class _RecordCollectionScreenState
   }
 
   void _addMaterial() {
-    final state = ref.read(demoStoreProvider);
+    final state = ref.read(appStoreProvider);
     final available = state.materials
         .where((m) => m.allowed && m.active)
         .toList();
@@ -105,19 +105,28 @@ class _RecordCollectionScreenState
     );
   }
 
-  void _confirm() {
+  Future<void> _confirm() async {
     if (_lines.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Add at least one material line.')),
       );
       return;
     }
-    final points = ref
-        .read(demoStoreProvider.notifier)
+    final points = await ref
+        .read(appStoreProvider.notifier)
         .recordCollection(beneficiaryId: widget.beneficiaryId, lines: _lines);
+    if (!mounted) return;
+    if (points == null) {
+      final error =
+          ref.read(appStoreProvider).error ??
+          'Could not record the collection. Try again.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
     final balance =
         ref
-            .read(demoStoreProvider)
+            .read(appStoreProvider)
             .beneficiaryById(widget.beneficiaryId)
             ?.balance ??
         0;
@@ -128,7 +137,7 @@ class _RecordCollectionScreenState
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(demoStoreProvider);
+    final state = ref.watch(appStoreProvider);
     final beneficiary = state.beneficiaryById(widget.beneficiaryId);
 
     return Scaffold(

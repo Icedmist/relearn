@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/session.dart';
 import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
+import '../../data/app_store.dart';
 
 class _NavItem {
   const _NavItem(this.path, this.icon, this.selectedIcon, this.label);
@@ -65,7 +68,7 @@ const _items = [
   ),
 ];
 
-class AdminShell extends StatelessWidget {
+class AdminShell extends ConsumerWidget {
   const AdminShell({super.key, required this.location, required this.child});
 
   final String location;
@@ -79,21 +82,34 @@ class AdminShell extends StatelessWidget {
   void _go(BuildContext context, int index) => context.go(_items[index].path);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(appStoreProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 940;
-        final content = SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: wide ? 32 : 20,
-            vertical: 24,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
-              child: child,
+        final content = Column(
+          children: [
+            if (state.loading) const LinearProgressIndicator(minHeight: 2),
+            if (state.error != null)
+              _ErrorBanner(
+                message: state.error!,
+                onDismiss: ref.read(appStoreProvider.notifier).clearError,
+              ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: wide ? 32 : 20,
+                  vertical: 24,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1280),
+                    child: child,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         );
 
         if (wide) {
@@ -120,6 +136,7 @@ class AdminShell extends StatelessWidget {
                       ),
                       child: _SidebarFooter(
                         extended: constraints.maxWidth >= 1180,
+                        live: state.isLive,
                       ),
                     ),
                     destinations: [
@@ -135,7 +152,13 @@ class AdminShell extends StatelessWidget {
                   Expanded(
                     child: Column(
                       children: [
-                        _AdminTopBar(compact: false),
+                        _AdminTopBar(
+                          compact: false,
+                          live: state.isLive,
+                          name: state.profile?.name ?? 'Abdullahi A.',
+                          role: state.profile?.roleLabel ?? 'Programme admin',
+                          onSignOut: () => signOutAndGo(context, ref),
+                        ),
                         Expanded(child: content),
                       ],
                     ),
@@ -152,7 +175,7 @@ class AdminShell extends StatelessWidget {
             actions: [
               IconButton(
                 tooltip: 'Account',
-                onPressed: () => context.go('/login'),
+                onPressed: () => signOutAndGo(context, ref),
                 icon: const Icon(Icons.account_circle_outlined),
               ),
             ],
@@ -194,7 +217,7 @@ class AdminShell extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.logout),
                     title: const Text('Sign out'),
-                    onTap: () => context.go('/login'),
+                    onTap: () => signOutAndGo(context, ref),
                   ),
                 ],
               ),
@@ -208,9 +231,19 @@ class AdminShell extends StatelessWidget {
 }
 
 class _AdminTopBar extends StatelessWidget {
-  const _AdminTopBar({required this.compact});
+  const _AdminTopBar({
+    required this.compact,
+    required this.live,
+    required this.name,
+    required this.role,
+    required this.onSignOut,
+  });
 
   final bool compact;
+  final bool live;
+  final String name;
+  final String role;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -223,15 +256,17 @@ class _AdminTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const StatusPill(
-            label: 'DEMO DATA',
-            color: AppColors.sky,
-            icon: Icons.science_outlined,
+          StatusPill(
+            label: live ? 'LIVE DATA' : 'DEMO DATA',
+            color: live ? AppColors.leaf : AppColors.sky,
+            icon: live ? Icons.cloud_done_outlined : Icons.science_outlined,
           ),
           if (!compact) ...[
             const SizedBox(width: 12),
             Text(
-              'Stage 0 scaffold · v${AppConfig.version}',
+              live
+                  ? 'Supabase · v${AppConfig.version}'
+                  : 'Stage 0 scaffold · v${AppConfig.version}',
               style: Theme.of(context).textTheme.bodySmall
                   ?.copyWith(color: AppColors.muted),
             ),
@@ -243,18 +278,15 @@ class _AdminTopBar extends StatelessWidget {
             icon: const Icon(Icons.qr_code_scanner, size: 20),
           ),
           const SizedBox(width: 4),
-          const InitialsAvatar(initials: 'AA', size: 34),
+          InitialsAvatar(initials: _initials(name), size: 34),
           const SizedBox(width: 10),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(name, style: Theme.of(context).textTheme.labelLarge),
               Text(
-                'Abdullahi A.',
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-              Text(
-                'Programme admin',
+                role,
                 style: Theme.of(context).textTheme.labelSmall
                     ?.copyWith(color: AppColors.muted),
               ),
@@ -263,19 +295,27 @@ class _AdminTopBar extends StatelessWidget {
           const SizedBox(width: 8),
           IconButton(
             tooltip: 'Sign out',
-            onPressed: () => context.go('/login'),
+            onPressed: onSignOut,
             icon: const Icon(Icons.logout, size: 19),
           ),
         ],
       ),
     );
   }
+
+  static String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
 }
 
 class _SidebarFooter extends StatelessWidget {
-  const _SidebarFooter({required this.extended});
+  const _SidebarFooter({required this.extended, required this.live});
 
   final bool extended;
+  final bool live;
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +331,9 @@ class _SidebarFooter extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'Demo data only.\nConnect Supabase in Stage 1.',
+              live
+                  ? 'Live Supabase data.\nPoints are server-calculated.'
+                  : 'Demo data only.\nConnect Supabase in Stage 1.',
               style: Theme.of(context).textTheme.labelSmall
                   ?.copyWith(color: AppColors.forest, height: 1.4),
             ),
@@ -303,6 +345,42 @@ class _SidebarFooter extends StatelessWidget {
           icon: const Icon(Icons.qr_code_scanner, size: 20),
         ),
       ],
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.danger.withValues(alpha: 0.08),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, size: 18, color: AppColors.danger),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: AppColors.danger),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Dismiss',
+              onPressed: onDismiss,
+              icon: const Icon(Icons.close, size: 16),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

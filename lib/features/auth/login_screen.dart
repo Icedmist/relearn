@@ -1,24 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
+import '../../data/app_store.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController(text: 'admin@relearn.app');
-  final _password = TextEditingController(text: 'relearn123');
+  final _email = TextEditingController(
+    text: AppConfig.demoMode ? 'admin@relearn.app' : '',
+  );
+  final _password = TextEditingController(
+    text: AppConfig.demoMode ? 'relearn123' : '',
+  );
   bool _obscure = true;
   bool _loading = false;
   bool _isAdmin = true;
+
+  bool get _live => !AppConfig.demoMode;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_live) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _restoreSession());
+    }
+  }
 
   @override
   void dispose() {
@@ -27,12 +44,79 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _restoreSession() async {
+    final auth = Supabase.instance.client.auth;
+    if (auth.currentSession == null) return;
+    final role = await _currentRole();
+    if (!mounted) return;
+    await ref.read(appStoreProvider.notifier).reload();
+    if (!mounted) return;
+    context.go(role == 'admin' ? '/admin/dashboard' : '/collector/home');
+  }
+
+  Future<String> _currentRole() async {
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+    if (user == null) return 'collector';
+    final row = await client
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+    return row?['role'] as String? ?? 'collector';
+  }
+
   Future<void> _signIn() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 550));
+    if (!_live) {
+      await Future<void>.delayed(const Duration(milliseconds: 550));
+      if (!mounted) return;
+      context.go(_isAdmin ? '/admin/dashboard' : '/collector/home');
+      return;
+    }
+
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: _email.text.trim(),
+        password: _password.text,
+      );
+      final role = await _currentRole();
+      await ref.read(appStoreProvider.notifier).reload();
+      if (!mounted) return;
+      context.go(role == 'admin' ? '/admin/dashboard' : '/collector/home');
+    } on AuthException catch (error) {
+      _notify(error.message);
+    } catch (error) {
+      _notify('Could not sign in: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    if (!_live) {
+      _notify('Password reset is available when Supabase is connected.');
+      return;
+    }
+    if (_email.text.trim().isEmpty) {
+      _notify('Enter your email first.');
+      return;
+    }
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        _email.text.trim(),
+      );
+      _notify('Password reset link sent to ${_email.text.trim()}.');
+    } on AuthException catch (error) {
+      _notify(error.message);
+    }
+  }
+
+  void _notify(String message) {
     if (!mounted) return;
-    context.go(_isAdmin ? '/admin/dashboard' : '/collector/home');
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -48,9 +132,11 @@ class _LoginScreenState extends State<LoginScreen> {
             obscure: _obscure,
             loading: _loading,
             isAdmin: _isAdmin,
+            live: _live,
             onToggleObscure: () => setState(() => _obscure = !_obscure),
             onRoleChanged: (admin) => setState(() => _isAdmin = admin),
             onSubmit: _signIn,
+            onForgotPassword: _resetPassword,
           );
           if (!wide) {
             return SafeArea(
@@ -234,9 +320,11 @@ class _LoginForm extends StatelessWidget {
     required this.obscure,
     required this.loading,
     required this.isAdmin,
+    required this.live,
     required this.onToggleObscure,
     required this.onRoleChanged,
     required this.onSubmit,
+    required this.onForgotPassword,
   });
 
   final GlobalKey<FormState> formKey;
@@ -245,9 +333,11 @@ class _LoginForm extends StatelessWidget {
   final bool obscure;
   final bool loading;
   final bool isAdmin;
+  final bool live;
   final VoidCallback onToggleObscure;
   final ValueChanged<bool> onRoleChanged;
   final VoidCallback onSubmit;
+  final VoidCallback onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -259,10 +349,10 @@ class _LoginForm extends StatelessWidget {
         children: [
           Row(
             children: [
-              const StatusPill(
-                label: 'DEMO MODE',
-                color: AppColors.sky,
-                icon: Icons.science_outlined,
+              StatusPill(
+                label: live ? 'LIVE · SUPABASE' : 'DEMO MODE',
+                color: live ? AppColors.leaf : AppColors.sky,
+                icon: live ? Icons.cloud_done_outlined : Icons.science_outlined,
               ),
               const Spacer(),
               Text(
@@ -277,33 +367,64 @@ class _LoginForm extends StatelessWidget {
           Text('Welcome back', style: theme.textTheme.headlineLarge),
           const SizedBox(height: 6),
           Text(
-            'Sign in to the programme dashboard or the collector app.',
+            live
+                ? 'Sign in with your programme account.'
+                : 'Sign in to the programme dashboard or the collector app.',
             style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.muted),
           ),
           const SizedBox(height: 28),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(
-                value: true,
-                label: Text('Admin'),
-                icon: Icon(Icons.dashboard_outlined),
-              ),
-              ButtonSegment(
-                value: false,
-                label: Text('Collector'),
-                icon: Icon(Icons.qr_code_scanner),
-              ),
-            ],
-            selected: {isAdmin},
-            onSelectionChanged: (value) => onRoleChanged(value.first),
-            showSelectedIcon: false,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.comfortable,
-              shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          if (!live) ...[
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: true,
+                  label: Text('Admin'),
+                  icon: Icon(Icons.dashboard_outlined),
+                ),
+                ButtonSegment(
+                  value: false,
+                  label: Text('Collector'),
+                  icon: Icon(Icons.qr_code_scanner),
+                ),
+              ],
+              selected: {isAdmin},
+              onSelectionChanged: (value) => onRoleChanged(value.first),
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.comfortable,
+                shape: WidgetStatePropertyAll(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
-          ),
+          ] else
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.leaf.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.verified_user_outlined,
+                    size: 18,
+                    color: AppColors.leaf,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your admin or collector role is assigned by the programme admin.',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.forest,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 24),
           TextFormField(
             controller: email,
@@ -347,13 +468,7 @@ class _LoginForm extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Password reset is wired to Supabase Auth in Stage 1.',
-                  ),
-                ),
-              ),
+              onPressed: onForgotPassword,
               child: const Text('Forgot password?'),
             ),
           ),
@@ -371,43 +486,51 @@ class _LoginForm extends StatelessWidget {
                         color: Colors.white,
                       ),
                     )
-                  : Text(isAdmin ? 'Sign in as admin' : 'Sign in as collector'),
+                  : Text(
+                      live
+                          ? 'Sign in'
+                          : isAdmin
+                          ? 'Sign in as admin'
+                          : 'Sign in as collector',
+                    ),
             ),
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              const Expanded(child: Divider()),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  'or jump straight in',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.muted,
+          if (!live) ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'or jump straight in',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.muted,
+                    ),
                   ),
                 ),
-              ),
-              const Expanded(child: Divider()),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.go('/admin/dashboard'),
-                  child: const Text('Admin demo'),
+                const Expanded(child: Divider()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.go('/admin/dashboard'),
+                    child: const Text('Admin demo'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.go('/collector/home'),
-                  child: const Text('Collector demo'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.go('/collector/home'),
+                    child: const Text('Collector demo'),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           const SizedBox(height: 28),
           Text(
             'By signing in you agree to the pilot data protection policy. '

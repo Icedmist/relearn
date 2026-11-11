@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 
 class RedeemScreen extends ConsumerStatefulWidget {
@@ -22,7 +22,7 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(demoStoreProvider);
+    final state = ref.watch(appStoreProvider);
     final beneficiary = state.beneficiaryById(widget.beneficiaryId);
     final rewards = state.rewards.where((r) => r.active).toList();
     final selected = _rewardId == null ? null : state.rewardById(_rewardId!);
@@ -273,14 +273,15 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
     );
   }
 
-  void _confirm() {
-    final error = ref
-        .read(demoStoreProvider.notifier)
+  Future<void> _confirm() async {
+    final error = await ref
+        .read(appStoreProvider.notifier)
         .redeem(
           beneficiaryId: widget.beneficiaryId,
           rewardId: _rewardId!,
           qty: _qty,
         );
+    if (!mounted) return;
     if (error != null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error)));
@@ -288,11 +289,11 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
     }
     final balance =
         ref
-            .read(demoStoreProvider)
+            .read(appStoreProvider)
             .beneficiaryById(widget.beneficiaryId)
             ?.balance ??
         0;
-    final reward = ref.read(demoStoreProvider).rewardById(_rewardId!);
+    final reward = ref.read(appStoreProvider).rewardById(_rewardId!);
     final cost = (reward?.pointsCost ?? 0) * _qty;
     context.pushReplacement(
       '/collector/success?action=redeem&points=$cost&balance=$balance&beneficiary=${widget.beneficiaryId}',

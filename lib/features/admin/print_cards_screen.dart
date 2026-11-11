@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
-import '../../data/demo_data.dart';
+import '../../data/app_store.dart';
 import '../../data/models.dart';
 
 class PrintCardsScreen extends ConsumerStatefulWidget {
@@ -22,7 +22,7 @@ class _PrintCardsScreenState extends ConsumerState<PrintCardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(demoStoreProvider);
+    final state = ref.watch(appStoreProvider);
     final schoolId =
         _schoolId ?? (state.schools.isNotEmpty ? state.schools.first.id : null);
     final school = schoolId == null ? null : state.schoolById(schoolId);
