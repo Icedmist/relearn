@@ -189,13 +189,17 @@ class KpiCard extends StatelessWidget {
                   ),
                   child: Icon(icon, size: 20, color: accent),
                 ),
-                const Spacer(),
                 if (hint != null)
-                  Text(
-                    hint!,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.leaf,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      hint!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.leaf,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
               ],
@@ -249,12 +253,16 @@ class StatusPill extends StatelessWidget {
             Icon(icon, size: 13, color: color),
             const SizedBox(width: 5),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: color,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
         ],

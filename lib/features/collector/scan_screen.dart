@@ -166,9 +166,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                     color: Colors.white70,
                   ),
                   SizedBox(width: 7),
-                  Text(
-                    'Camera preview · simulated in Stage 0',
-                    style: TextStyle(color: Colors.white70, fontSize: 11.5),
+                  Flexible(
+                    child: Text(
+                      'Camera preview · simulated in Stage 0',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white70, fontSize: 11.5),
+                    ),
                   ),
                 ],
               ),

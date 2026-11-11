@@ -58,68 +58,79 @@ class _BeneficiariesScreenState extends ConsumerState<BeneficiariesScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        onChanged: (value) => setState(() => _query = value),
-                        decoration: const InputDecoration(
-                          hintText: 'Search by name or ID',
-                          prefixIcon: Icon(Icons.search, size: 20),
-                          isDense: true,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final search = TextField(
+                      onChanged: (value) => setState(() => _query = value),
+                      decoration: const InputDecoration(
+                        hintText: 'Search by name or ID',
+                        prefixIcon: Icon(Icons.search, size: 20),
+                        isDense: true,
+                      ),
+                    );
+                    final schoolFilter = DropdownButtonFormField<String>(
+                      initialValue: _schoolId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(isDense: true),
+                      items: [
+                        const DropdownMenuItem(
+                          value: 'all',
+                          child: Text('All schools'),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 230,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _schoolId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(isDense: true),
-                        items: [
-                          const DropdownMenuItem(
-                            value: 'all',
-                            child: Text('All schools'),
-                          ),
-                          for (final s in state.schools)
-                            DropdownMenuItem(
-                              value: s.id,
-                              child: Text(
-                                s.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                        for (final s in state.schools)
+                          DropdownMenuItem(
+                            value: s.id,
+                            child: Text(
+                              s.name,
+                              overflow: TextOverflow.ellipsis,
                             ),
+                          ),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _schoolId = value ?? 'all'),
+                    );
+
+                    if (constraints.maxWidth < 560) {
+                      return Column(
+                        children: [
+                          search,
+                          const SizedBox(height: 12),
+                          schoolFilter,
                         ],
-                        onChanged: (value) =>
-                            setState(() => _schoolId = value ?? 'all'),
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: search),
+                        const SizedBox(width: 12),
+                        SizedBox(width: 230, child: schoolFilter),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     FilterChip(
                       label: const Text('All types'),
                       selected: _type == null,
                       onSelected: (_) => setState(() => _type = null),
                     ),
-                    const SizedBox(width: 8),
                     FilterChip(
                       label: const Text('Pupils'),
                       selected: _type == BeneficiaryType.pupil,
                       onSelected: (_) =>
                           setState(() => _type = BeneficiaryType.pupil),
                     ),
-                    const SizedBox(width: 8),
                     FilterChip(
                       label: const Text('Teachers'),
                       selected: _type == BeneficiaryType.teacher,
                       onSelected: (_) =>
                           setState(() => _type = BeneficiaryType.teacher),
                     ),
-                    const Spacer(),
                     Text(
                       '${list.length} result${list.length == 1 ? '' : 's'}',
                       style: Theme.of(context).textTheme.bodySmall

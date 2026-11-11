@@ -217,11 +217,14 @@ class BeneficiaryCardScreen extends ConsumerWidget {
                   const SizedBox(height: 22),
                   Row(
                     children: [
-                      Text(
-                        'Recent history',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Expanded(
+                        child: Text(
+                          'Recent history',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                      const Spacer(),
                       TextButton(
                         onPressed: () => context.go('/collector/history'),
                         child: const Text('Full history'),

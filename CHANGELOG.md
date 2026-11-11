@@ -12,6 +12,17 @@ All notable changes to ReLearn are documented here. Format follows
 - Stage 3: server points engine and atomic redemption.
 - Stage 4: live dashboard queries, filters, CSV reports.
 
+## [0.1.2] — 2026-11-11
+
+### Fixed
+- Responsive layouts for every admin and collector screen at phone widths
+  (360–390 px) and desktop widths (1280 px).
+- Long labels and status pills now ellipsize instead of overflowing.
+- Admin tables and filter bars wrap or scroll on narrow screens.
+- Print-card preview no longer uses flex in an unbounded column.
+- Collector app bar hides the demo version pill on small phones.
+- Added screen smoke tests that render all 20 routes at phone and desktop sizes.
+
 ## [0.1.1] — 2026-11-11
 
 ### Added
@@ -35,6 +46,7 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Icedmist/relearn/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Icedmist/relearn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Icedmist/relearn/releases/tag/v0.1.0

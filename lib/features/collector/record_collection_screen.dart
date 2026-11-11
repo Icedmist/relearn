@@ -187,11 +187,14 @@ class _RecordCollectionScreenState
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Text(
-                        'Materials received',
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Expanded(
+                        child: Text(
+                          'Materials received',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                      const Spacer(),
                       TextButton.icon(
                         onPressed: _addMaterial,
                         icon: const Icon(Icons.add, size: 17),

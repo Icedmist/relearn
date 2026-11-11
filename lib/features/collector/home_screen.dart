@@ -174,8 +174,14 @@ class CollectorHomeScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           Row(
             children: [
-              Text('Recent beneficiaries', style: theme.textTheme.titleMedium),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  'Recent beneficiaries',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
               TextButton(
                 onPressed: () => context.push('/collector/search'),
                 child: const Text('See all'),

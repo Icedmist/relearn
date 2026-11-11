@@ -112,19 +112,14 @@ class AdminShell extends StatelessWidget {
                           ? const BrandLogo(height: 34)
                           : const BrandLogo(height: 34, horizontal: false),
                     ),
-                    trailing: Expanded(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: 18,
-                            left: 8,
-                            right: 8,
-                          ),
-                          child: _SidebarFooter(
-                            extended: constraints.maxWidth >= 1180,
-                          ),
-                        ),
+                    trailing: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: 18,
+                        left: 8,
+                        right: 8,
+                      ),
+                      child: _SidebarFooter(
+                        extended: constraints.maxWidth >= 1180,
                       ),
                     ),
                     destinations: [
@@ -289,7 +284,7 @@ class _SidebarFooter extends StatelessWidget {
       children: [
         if (extended)
           Container(
-            width: double.infinity,
+            width: 200,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.leaf.withValues(alpha: 0.08),

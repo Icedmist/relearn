@@ -340,7 +340,7 @@ class _CardPreview extends StatelessWidget {
                               color: AppColors.muted,
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(height: 1),
                           Text(
                             beneficiary.publicId,
                             style: const TextStyle(

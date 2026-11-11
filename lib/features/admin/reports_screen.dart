@@ -75,73 +75,87 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: SegmentedButton<_ReportTab>(
-                        showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment(
-                            value: _ReportTab.collections,
-                            label: Text('Collections'),
-                          ),
-                          ButtonSegment(
-                            value: _ReportTab.redemptions,
-                            label: Text('Redemptions'),
-                          ),
-                          ButtonSegment(
-                            value: _ReportTab.ledger,
-                            label: Text('Points ledger'),
-                          ),
-                        ],
-                        selected: {_tab},
-                        onSelectionChanged: (value) =>
-                            setState(() => _tab = value.first),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 250,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _schoolId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'School',
-                          isDense: true,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final tabs = SegmentedButton<_ReportTab>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(
+                          value: _ReportTab.collections,
+                          label: Text('Collections'),
                         ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: 'all',
-                            child: Text('All schools'),
-                          ),
-                          for (final s in state.schools)
-                            DropdownMenuItem(
-                              value: s.id,
-                              child: Text(
-                                s.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => _schoolId = value ?? 'all'),
+                        ButtonSegment(
+                          value: _ReportTab.redemptions,
+                          label: Text('Redemptions'),
+                        ),
+                        ButtonSegment(
+                          value: _ReportTab.ledger,
+                          label: Text('Points ledger'),
+                        ),
+                      ],
+                      selected: {_tab},
+                      onSelectionChanged: (value) =>
+                          setState(() => _tab = value.first),
+                    );
+                    final schoolFilter = DropdownButtonFormField<String>(
+                      initialValue: _schoolId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'School',
+                        isDense: true,
                       ),
-                    ),
-                  ],
+                      items: [
+                        const DropdownMenuItem(
+                          value: 'all',
+                          child: Text('All schools'),
+                        ),
+                        for (final s in state.schools)
+                          DropdownMenuItem(
+                            value: s.id,
+                            child: Text(
+                              s.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _schoolId = value ?? 'all'),
+                    );
+
+                    if (constraints.maxWidth < 640) {
+                      return Column(
+                        children: [
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: tabs,
+                          ),
+                          const SizedBox(height: 12),
+                          schoolFilter,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: tabs),
+                        const SizedBox(width: 12),
+                        SizedBox(width: 250, child: schoolFilter),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 14),
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _SummaryChip(label: 'Rows', value: '$rows'),
-                    const SizedBox(width: 10),
                     _SummaryChip(label: 'Points', value: formatPoints(points)),
-                    const SizedBox(width: 10),
                     _SummaryChip(
                       label: 'Date range',
                       value: 'All time',
                       icon: Icons.calendar_today_outlined,
                     ),
-                    const Spacer(),
                     Text(
                       'Filters: ${_schoolId == 'all' ? 'all schools' : state.schoolById(_schoolId)?.name ?? ''}',
                       style: Theme.of(context).textTheme.labelSmall
