@@ -6,6 +6,7 @@
 <p align="center"><strong>Waste in. School supplies out.</strong></p>
 
 <p align="center">
+  <a href="https://github.com/Icedmist/relearn/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Icedmist/relearn/actions/workflows/ci.yml/badge.svg"></a>
   <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-stage%200%20scaffold-2E9E5B"></a>
   <a href="#stack"><img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B"></a>
   <a href="#stack"><img alt="Supabase" src="https://img.shields.io/badge/Backend-Supabase-3ECF8E"></a>
