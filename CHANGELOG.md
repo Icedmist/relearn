@@ -12,6 +12,13 @@ All notable changes to ReLearn are documented here. Format follows
 - Stage 3: server points engine and atomic redemption.
 - Stage 4: live dashboard queries, filters, CSV reports.
 
+## [0.1.1] — 2026-11-11
+
+### Added
+- GitHub Actions CI: format check, analyze, tests and a release web build on
+  every pull request and push to `main`.
+- CI status badge in the README.
+
 ## [0.1.0] — 2026-11-10
 
 ### Added
@@ -28,5 +35,6 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Icedmist/relearn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Icedmist/relearn/releases/tag/v0.1.0
