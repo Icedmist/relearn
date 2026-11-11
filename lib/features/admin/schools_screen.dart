@@ -207,84 +207,130 @@ class _SchoolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: school.active
-                    ? AppColors.leaf.withValues(alpha: 0.1)
-                    : AppColors.line,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.school_outlined,
-                color: school.active ? AppColors.leaf : AppColors.muted,
+            Flexible(
+              child: Text(
+                school.name,
+                style: theme.textTheme.titleMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
+            const SizedBox(width: 8),
+            StatusPill(
+              label: school.active ? 'ACTIVE' : 'INACTIVE',
+              color: school.active ? AppColors.leaf : AppColors.muted,
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          school.address,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.muted),
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 620;
+        final icon = Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: school.active
+                ? AppColors.leaf.withValues(alpha: 0.1)
+                : AppColors.line,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.school_outlined,
+            color: school.active ? AppColors.leaf : AppColors.muted,
+          ),
+        );
+        final menu = PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'toggle') onToggle();
+            if (value == 'edit') onEdit();
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 'edit', child: Text('Edit school')),
+            PopupMenuItem(
+              value: 'toggle',
+              child: Text(
+                school.active ? 'Deactivate school' : 'Reactivate school',
+              ),
+            ),
+          ],
+        );
+
+        if (compact) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          school.name,
-                          style: theme.textTheme.titleMedium,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      StatusPill(
-                        label: school.active ? 'ACTIVE' : 'INACTIVE',
-                        color: school.active ? AppColors.leaf : AppColors.muted,
-                      ),
+                      icon,
+                      const SizedBox(width: 14),
+                      Expanded(child: details),
+                      menu,
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    school.address,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.muted,
-                    ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _MiniStat(label: 'People', value: '$beneficiaryCount'),
+                      _MiniStat(label: 'Points', value: formatPoints(points)),
+                      TextButton.icon(
+                        onPressed: onOpen,
+                        icon: const Icon(Icons.chevron_right, size: 18),
+                        label: const Text('View beneficiaries'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            _MiniStat(label: 'People', value: '$beneficiaryCount'),
-            const SizedBox(width: 20),
-            _MiniStat(label: 'Points', value: formatPoints(points)),
-            const SizedBox(width: 8),
-            IconButton(
-              tooltip: 'View beneficiaries',
-              onPressed: onOpen,
-              icon: const Icon(Icons.chevron_right),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'toggle') onToggle();
-                if (value == 'edit') onEdit();
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'edit', child: Text('Edit school')),
-                PopupMenuItem(
-                  value: 'toggle',
-                  child: Text(
-                    school.active ? 'Deactivate school' : 'Reactivate school',
-                  ),
+          );
+        }
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                icon,
+                const SizedBox(width: 14),
+                Expanded(child: details),
+                const SizedBox(width: 12),
+                _MiniStat(label: 'People', value: '$beneficiaryCount'),
+                const SizedBox(width: 20),
+                _MiniStat(label: 'Points', value: formatPoints(points)),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'View beneficiaries',
+                  onPressed: onOpen,
+                  icon: const Icon(Icons.chevron_right),
                 ),
+                menu,
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

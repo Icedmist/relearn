@@ -64,14 +64,18 @@ class _CollectorSearchScreenState extends ConsumerState<CollectorSearchScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              Text(
-                _query.isEmpty
-                    ? 'Recent beneficiaries'
-                    : '${results.length} result(s)',
-                style: Theme.of(context).textTheme.labelMedium
-                    ?.copyWith(color: AppColors.muted),
+              Expanded(
+                child: Text(
+                  _query.isEmpty
+                      ? 'Recent beneficiaries'
+                      : '${results.length} result(s)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium
+                      ?.copyWith(color: AppColors.muted),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               const Text(
                 'Tap to open',
                 style: TextStyle(fontSize: 11.5, color: AppColors.muted),

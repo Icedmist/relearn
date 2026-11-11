@@ -23,15 +23,26 @@ class CollectorShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 480;
     return Scaffold(
       appBar: AppBar(
         title: const BrandLogo(height: 30),
         actions: [
-          StatusPill(
-            label: 'DEMO · v${AppConfig.version}',
-            color: AppColors.sky,
-            icon: Icons.science_outlined,
-          ),
+          if (narrow)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(
+                Icons.science_outlined,
+                size: 20,
+                color: AppColors.sky,
+              ),
+            )
+          else
+            StatusPill(
+              label: 'DEMO · v${AppConfig.version}',
+              color: AppColors.sky,
+              icon: Icons.science_outlined,
+            ),
           const SizedBox(width: 8),
           IconButton(
             tooltip: 'Admin dashboard',
