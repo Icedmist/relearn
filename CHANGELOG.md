@@ -10,6 +10,23 @@ All notable changes to ReLearn are documented here. Format follows
 - Stage 2: camera scanning, offline queue, sync status.
 - Stage 3: PDF card export and printable batches.
 
+## [0.2.1] — 2026-11-12
+
+### Fixed
+- Release Android builds now include the `INTERNET` permission, so sign-in and
+  data access work outside debug builds.
+- Sign-up no longer leaves an admin signed in as the newly created account; the
+  original session is restored before the role is assigned.
+
+### Added
+- Admin → Users → **Add user** creates a real Supabase Auth account with a name,
+  email, temporary password and role (collector or admin).
+- Created accounts appear in the staff directory and can sign in immediately.
+
+### Changed
+- Removed the live/online status indicators (`LIVE DATA`, `LIVE · SUPABASE`,
+  `ONLINE`) from the admin top bar, collector app bar, collector home and login.
+
 ## [0.2.0] — 2026-11-12
 
 ### Added
@@ -76,7 +93,8 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Icedmist/relearn/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Icedmist/relearn/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Icedmist/relearn/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/Icedmist/relearn/compare/v0.1.0...v0.1.1

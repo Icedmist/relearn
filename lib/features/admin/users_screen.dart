@@ -54,6 +54,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     ),
   ];
   final _demoActive = <String, bool>{};
+  bool _creating = false;
 
   bool get _live => !AppConfig.demoMode;
 
@@ -76,12 +77,21 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
         PageHeader(
           eyebrow: 'Access',
           title: 'Users',
-          subtitle: 'Staff accounts live in Supabase Auth. Roles and access are stored in profiles and enforced by RLS.',
+          subtitle: 'Create staff accounts and set their role. Access is enforced by Row Level Security, not just the UI.',
           actions: [
             FilledButton.icon(
-              onPressed: _showInvite,
-              icon: const Icon(Icons.person_add_alt_1, size: 18),
-              label: Text(_live ? 'How to add a user' : 'Invite user'),
+              onPressed: _creating ? null : _createUser,
+              icon: _creating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.person_add_alt_1, size: 18),
+              label: Text(_creating ? 'Creating…' : 'Add user'),
             ),
           ],
         ),
@@ -90,7 +100,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
               ? const EmptyState(
                   icon: Icons.people_outline,
                   title: 'No staff accounts',
-                  message: 'Create users in Supabase Auth and assign a role in profiles.',
+                  message: 'Add a user to create the first account.',
                 )
               : Column(
                   children: [
@@ -158,29 +168,44 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     }
   }
 
-  void _showInvite() {
-    showDialog<void>(
+  Future<void> _createUser() async {
+    final input = await showDialog<_NewStaff>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(_live ? 'Add a staff user' : 'Invite user'),
-        content: SizedBox(
-          width: 400,
-          child: Text(
-            _live
-                ? 'Create the account in Supabase → Authentication → Users, then set the role in the profiles table:\n\n'
-                      "update public.profiles set role = 'collector' where id = '<user-id>';\n\n"
-                      'Accounts are never created by the client, so nobody can self-assign an admin role.'
-                : 'Demo mode keeps accounts in memory. In live mode, accounts are created in Supabase Auth and roles are assigned in profiles.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.5),
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
+      builder: (_) => const _CreateUserDialog(),
+    );
+    if (input == null || !mounted) return;
+
+    if (!_live) {
+      final user = StaffUser(
+        id: 'usr-${_demoUsers.length + 1}',
+        name: input.name,
+        email: input.email,
+        role: input.role,
+        active: true,
+      );
+      setState(() {
+        _demoUsers.insert(0, user);
+        _demoActive[user.id] = true;
+      });
+      _notify('Account created for ${input.email}.');
+      return;
+    }
+
+    setState(() => _creating = true);
+    final error = await ref
+        .read(appStoreProvider.notifier)
+        .createStaffUser(
+          name: input.name,
+          email: input.email,
+          password: input.password,
+          role: input.role,
+        );
+    if (!mounted) return;
+    setState(() => _creating = false);
+    _notify(
+      error ??
+          'Account created for ${input.email}. '
+              'Share the temporary password securely.',
     );
   }
 
@@ -188,6 +213,163 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _NewStaff {
+  const _NewStaff({
+    required this.name,
+    required this.email,
+    required this.password,
+    required this.role,
+  });
+
+  final String name;
+  final String email;
+  final String password;
+  final String role;
+}
+
+class _CreateUserDialog extends StatefulWidget {
+  const _CreateUserDialog();
+
+  @override
+  State<_CreateUserDialog> createState() => _CreateUserDialogState();
+}
+
+class _CreateUserDialogState extends State<_CreateUserDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  String _role = 'collector';
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    Navigator.pop(
+      context,
+      _NewStaff(
+        name: _name.text.trim(),
+        email: _email.text.trim().toLowerCase(),
+        password: _password.text,
+        role: _role,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text('Create staff account'),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'The account can sign in immediately. Share the temporary '
+                  'password securely and ask them to change it.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.muted,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextFormField(
+                  controller: _name,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Full name',
+                    hintText: 'e.g. Musa Bello',
+                  ),
+                  validator: (value) => (value ?? '').trim().isEmpty
+                      ? 'Enter the staff member’s name.'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'name@relearn.app',
+                  ),
+                  validator: (value) {
+                    final email = (value ?? '').trim();
+                    final valid = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                        .hasMatch(email);
+                    return valid ? null : 'Enter a valid email address.';
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _password,
+                  obscureText: _obscure,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    labelText: 'Temporary password',
+                    hintText: 'At least 8 characters',
+                    suffixIcon: IconButton(
+                      tooltip: _obscure ? 'Show password' : 'Hide password',
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                    ),
+                  ),
+                  validator: (value) => (value ?? '').length < 8
+                      ? 'Use at least 8 characters.'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _role,
+                  decoration: const InputDecoration(labelText: 'Role'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'collector',
+                      child: Text('Collector — scan, record, redeem'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'admin',
+                      child: Text('Admin — full access'),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _role = value ?? 'collector'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Create account')),
+      ],
+    );
   }
 }
 

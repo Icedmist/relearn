@@ -747,6 +747,44 @@ class AppStore extends Notifier<AppState> {
     if (repo != null) _write(repo.setCardBlocked(id, blocked));
   }
 
+  /// Returns null on success, or a human-readable error message.
+  Future<String?> createStaffUser({
+    required String name,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    final repo = _repo;
+    if (repo == null) {
+      state = state.copyWith(
+        users: [
+          ...state.users,
+          StaffUser(
+            id: 'usr-${state.users.length + 1}',
+            name: name,
+            email: email,
+            role: role,
+            active: true,
+          ),
+        ],
+      );
+      return null;
+    }
+    try {
+      await repo.createStaffUser(
+        name: name,
+        email: email,
+        password: password,
+        role: role,
+      );
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      _fail(error);
+      return _message(error);
+    }
+  }
+
   void setStaffActive(String id, bool active) {
     state = state.copyWith(
       users: [

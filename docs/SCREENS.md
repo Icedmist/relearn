@@ -218,7 +218,8 @@ atomically with redemption.
 
 **Content**
 - Table: name, email, role, status, last active.
-- Create user (email, name, role) → invite email via Supabase Auth.
+- Create account (name, email, temporary password, role). Admins can create
+  both collectors and admins; the account can sign in immediately.
 - Reset password (send link), deactivate/reactivate.
 - Role change restricted to admins.
 
@@ -237,7 +238,7 @@ session for 30 days (P1).
 **Purpose:** start work in one tap.
 
 **Content**
-- Greeting, school/route name, sync status pill.
+- Greeting, school/route name.
 - Large primary "Scan QR card" button.
 - Secondary "Search beneficiary".
 - Today: collections count, kg, points awarded, rewards given.

@@ -99,10 +99,11 @@ school without developer help.
   redeeming really deducts points and stock for the session.
 - Brand system: logo, palette, typography and app icons.
 - Complete Supabase schema with RLS, atomic RPCs and an append-only ledger.
+- Live Supabase auth and persistence, with admin-created staff accounts and a
+  server-enforced staff directory.
 
 ### Not built yet (by design)
 
-- Real authentication and Supabase persistence.
 - Camera scanning (`mobile_scanner`), PDF export (`pdf`/`printing`), CSV import.
 - Drift offline queue and sync worker.
 - Live dashboard queries and CSV reports.
