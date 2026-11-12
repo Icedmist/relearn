@@ -140,6 +140,8 @@ class Reward {
     required this.pointsCost,
     required this.stock,
     required this.active,
+    this.category = 'Other',
+    this.description,
     this.imageUrl,
   });
 
@@ -148,19 +150,26 @@ class Reward {
   final int pointsCost;
   final int stock;
   final bool active;
+  final String category;
+  final String? description;
   final String? imageUrl;
 
   Reward copyWith({
+    String? name,
     int? pointsCost,
     int? stock,
     bool? active,
+    String? category,
+    String? description,
     String? imageUrl,
   }) => Reward(
     id: id,
-    name: name,
+    name: name ?? this.name,
     pointsCost: pointsCost ?? this.pointsCost,
     stock: stock ?? this.stock,
     active: active ?? this.active,
+    category: category ?? this.category,
+    description: description ?? this.description,
     imageUrl: imageUrl ?? this.imageUrl,
   );
 }

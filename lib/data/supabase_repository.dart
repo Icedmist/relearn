@@ -206,6 +206,8 @@ class SupabaseRepository {
     required String name,
     required int pointsCost,
     required int stock,
+    String category = 'Other',
+    String? description,
     String? imageUrl,
   }) async {
     final row = await _client
@@ -214,6 +216,8 @@ class SupabaseRepository {
           'name': name,
           'points_cost': pointsCost,
           'stock': stock,
+          'category': category,
+          'description': ?description,
           'image_url': ?imageUrl,
         })
         .select()
@@ -223,17 +227,23 @@ class SupabaseRepository {
 
   Future<void> updateReward(
     String id, {
+    String? name,
     int? pointsCost,
     int? stock,
     bool? active,
+    String? category,
+    String? description,
     String? imageUrl,
   }) async {
     await _client
         .from('rewards')
         .update({
+          'name': ?name,
           'points_cost': ?pointsCost,
           'stock': ?stock,
           'active': ?active,
+          'category': ?category,
+          'description': ?description,
           'image_url': ?imageUrl,
         })
         .eq('id', id);
@@ -445,6 +455,8 @@ class SupabaseRepository {
     pointsCost: (row['points_cost'] as num?)?.toInt() ?? 0,
     stock: (row['stock'] as num?)?.toInt() ?? 0,
     active: row['active'] as bool? ?? true,
+    category: row['category'] as String? ?? 'Other',
+    description: row['description'] as String?,
     imageUrl: row['image_url'] as String?,
   );
 

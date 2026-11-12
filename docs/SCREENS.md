@@ -183,13 +183,14 @@ preserved.
 
 ---
 
-## 9. Admin — Rewards & stock `/admin/rewards`
+## 9. Admin — Item shop `/admin/rewards`
 
-**Purpose:** manage the catalogue and stock.
+**Purpose:** manage the catalogue and stock as a marketplace preview.
 
 **Content**
-- Cards/table: reward, points cost, stock, active, redemptions count.
-- Add/edit: name, points cost, stock, active.
+- Searchable, category-filtered grid with item artwork, category, description,
+  points, stock, visibility and redemptions count.
+- Add/edit: name, category, description, points, stock, image URL, active.
 - "Restock" quick action with quantity; stock movement history (P2).
 - Low-stock highlight at ≤ 10.
 
@@ -321,8 +322,9 @@ per submission.
 
 **Content**
 - Beneficiary strip and current balance.
-- Reward cards with points cost, stock, and "can afford" state.
-- Quantity stepper.
+- Marketplace grid with category filters, item artwork, points, stock and
+  "can afford" state.
+- Selected-item detail panel with quantity stepper.
 - Summary: cost, balance after, stock after.
 - Confirm button disabled if insufficient balance/stock.
 - Option to record a collection instead if balance is short.

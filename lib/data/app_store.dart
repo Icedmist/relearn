@@ -278,6 +278,8 @@ class AppState {
       Reward(
         id: 'rew-1',
         name: 'Pencil',
+        category: 'Stationery',
+        description: 'HB pencil for everyday classwork.',
         pointsCost: 20,
         stock: 240,
         active: true,
@@ -285,6 +287,8 @@ class AppState {
       Reward(
         id: 'rew-2',
         name: 'Exercise book',
+        category: 'Books',
+        description: '80-page ruled exercise book.',
         pointsCost: 80,
         stock: 96,
         active: true,
@@ -292,6 +296,8 @@ class AppState {
       Reward(
         id: 'rew-3',
         name: 'School backpack',
+        category: 'Bags',
+        description: 'Durable backpack with padded straps.',
         pointsCost: 400,
         stock: 6,
         active: true,
@@ -299,6 +305,8 @@ class AppState {
       Reward(
         id: 'rew-4',
         name: 'Eraser',
+        category: 'Stationery',
+        description: 'Soft eraser that does not tear the page.',
         pointsCost: 15,
         stock: 300,
         active: true,
@@ -306,6 +314,8 @@ class AppState {
       Reward(
         id: 'rew-5',
         name: 'Pencil sharpener',
+        category: 'Stationery',
+        description: 'Compact sharpener with a shatter-proof blade.',
         pointsCost: 15,
         stock: 300,
         active: true,
@@ -313,6 +323,8 @@ class AppState {
       Reward(
         id: 'rew-6',
         name: '30 cm ruler',
+        category: 'Maths',
+        description: 'Clear 30 cm ruler with metric markings.',
         pointsCost: 25,
         stock: 200,
         active: true,
@@ -320,6 +332,8 @@ class AppState {
       Reward(
         id: 'rew-7',
         name: 'Blue ballpoint pen',
+        category: 'Stationery',
+        description: 'Smooth-writing blue ballpoint pen.',
         pointsCost: 30,
         stock: 300,
         active: true,
@@ -327,6 +341,8 @@ class AppState {
       Reward(
         id: 'rew-8',
         name: 'HB pencil (pack of 3)',
+        category: 'Stationery',
+        description: 'Three HB pencils for a full term.',
         pointsCost: 50,
         stock: 200,
         active: true,
@@ -334,6 +350,8 @@ class AppState {
       Reward(
         id: 'rew-9',
         name: 'Drawing book',
+        category: 'Art',
+        description: 'A4 drawing book with 40 blank pages.',
         pointsCost: 90,
         stock: 80,
         active: true,
@@ -341,6 +359,8 @@ class AppState {
       Reward(
         id: 'rew-10',
         name: 'Crayons (8 colours)',
+        category: 'Art',
+        description: 'Eight bright, non-toxic wax crayons.',
         pointsCost: 110,
         stock: 80,
         active: true,
@@ -348,6 +368,8 @@ class AppState {
       Reward(
         id: 'rew-11',
         name: 'Coloured pencils (12)',
+        category: 'Art',
+        description: 'Twelve coloured pencils in a keepsake tin.',
         pointsCost: 120,
         stock: 80,
         active: true,
@@ -355,6 +377,8 @@ class AppState {
       Reward(
         id: 'rew-12',
         name: 'Geometry set',
+        category: 'Maths',
+        description: 'Compass, protractor, set squares and ruler.',
         pointsCost: 180,
         stock: 40,
         active: true,
@@ -362,6 +386,8 @@ class AppState {
       Reward(
         id: 'rew-13',
         name: 'Lunch box',
+        category: 'Lunch',
+        description: 'Insulated lunch box with a secure lid.',
         pointsCost: 220,
         stock: 20,
         active: true,
@@ -369,6 +395,8 @@ class AppState {
       Reward(
         id: 'rew-14',
         name: 'Water bottle',
+        category: 'Lunch',
+        description: '500 ml leak-proof school water bottle.',
         pointsCost: 250,
         stock: 30,
         active: true,
@@ -376,6 +404,8 @@ class AppState {
       Reward(
         id: 'rew-15',
         name: 'Atlas',
+        category: 'Books',
+        description: 'Illustrated world atlas for social studies.',
         pointsCost: 300,
         stock: 10,
         active: true,
@@ -383,6 +413,8 @@ class AppState {
       Reward(
         id: 'rew-16',
         name: 'Exercise book (pack of 5)',
+        category: 'Books',
+        description: 'Five ruled exercise books for the term.',
         pointsCost: 350,
         stock: 40,
         active: true,
@@ -390,6 +422,8 @@ class AppState {
       Reward(
         id: 'rew-17',
         name: 'Oxford school dictionary',
+        category: 'Books',
+        description: 'Oxford school dictionary for class and homework.',
         pointsCost: 350,
         stock: 20,
         active: true,
@@ -397,6 +431,8 @@ class AppState {
       Reward(
         id: 'rew-18',
         name: 'Scientific calculator',
+        category: 'Maths',
+        description: 'Scientific calculator for maths and science.',
         pointsCost: 500,
         stock: 15,
         active: true,
@@ -837,6 +873,9 @@ class AppStore extends Notifier<AppState> {
     required String name,
     required int pointsCost,
     required int stock,
+    String category = 'Other',
+    String? description,
+    String? imageUrl,
   }) {
     final repo = _repo;
     if (repo == null) {
@@ -849,12 +888,24 @@ class AppStore extends Notifier<AppState> {
             pointsCost: pointsCost,
             stock: stock,
             active: true,
+            category: category,
+            description: description,
+            imageUrl: imageUrl,
           ),
         ],
       );
       return;
     }
-    _write(repo.addReward(name: name, pointsCost: pointsCost, stock: stock));
+    _write(
+      repo.addReward(
+        name: name,
+        pointsCost: pointsCost,
+        stock: stock,
+        category: category,
+        description: description,
+        imageUrl: imageUrl,
+      ),
+    );
   }
 
   void updateMaterial(
@@ -889,12 +940,29 @@ class AppStore extends Notifier<AppState> {
     }
   }
 
-  void updateReward(String id, {int? pointsCost, int? stock, bool? active}) {
+  void updateReward(
+    String id, {
+    String? name,
+    int? pointsCost,
+    int? stock,
+    bool? active,
+    String? category,
+    String? description,
+    String? imageUrl,
+  }) {
     state = state.copyWith(
       rewards: [
         for (final r in state.rewards)
           if (r.id == id)
-            r.copyWith(pointsCost: pointsCost, stock: stock, active: active)
+            r.copyWith(
+              name: name,
+              pointsCost: pointsCost,
+              stock: stock,
+              active: active,
+              category: category,
+              description: description,
+              imageUrl: imageUrl,
+            )
           else
             r,
       ],
@@ -904,9 +972,13 @@ class AppStore extends Notifier<AppState> {
       _write(
         repo.updateReward(
           id,
+          name: name,
           pointsCost: pointsCost,
           stock: stock,
           active: active,
+          category: category,
+          description: description,
+          imageUrl: imageUrl,
         ),
       );
     }
