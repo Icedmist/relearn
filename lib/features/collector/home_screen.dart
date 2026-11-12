@@ -53,11 +53,6 @@ class CollectorHomeScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const StatusPill(
-                label: 'ONLINE',
-                color: AppColors.leaf,
-                icon: Icons.cloud_done_outlined,
-              ),
             ],
           ),
           const SizedBox(height: 18),

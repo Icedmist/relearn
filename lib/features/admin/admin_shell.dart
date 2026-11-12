@@ -136,7 +136,6 @@ class AdminShell extends ConsumerWidget {
                       ),
                       child: _SidebarFooter(
                         extended: constraints.maxWidth >= 1180,
-                        live: state.isLive,
                       ),
                     ),
                     destinations: [
@@ -153,8 +152,6 @@ class AdminShell extends ConsumerWidget {
                     child: Column(
                       children: [
                         _AdminTopBar(
-                          compact: false,
-                          live: state.isLive,
                           name: state.profile?.name ?? 'Abdullahi A.',
                           role: state.profile?.roleLabel ?? 'Programme admin',
                           onSignOut: () => signOutAndGo(context, ref),
@@ -232,15 +229,11 @@ class AdminShell extends ConsumerWidget {
 
 class _AdminTopBar extends StatelessWidget {
   const _AdminTopBar({
-    required this.compact,
-    required this.live,
     required this.name,
     required this.role,
     required this.onSignOut,
   });
 
-  final bool compact;
-  final bool live;
   final String name;
   final String role;
   final VoidCallback onSignOut;
@@ -256,21 +249,11 @@ class _AdminTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          StatusPill(
-            label: live ? 'LIVE DATA' : 'DEMO DATA',
-            color: live ? AppColors.leaf : AppColors.sky,
-            icon: live ? Icons.cloud_done_outlined : Icons.science_outlined,
+          Text(
+            'v${AppConfig.version}',
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: AppColors.muted),
           ),
-          if (!compact) ...[
-            const SizedBox(width: 12),
-            Text(
-              live
-                  ? 'Supabase · v${AppConfig.version}'
-                  : 'Stage 0 scaffold · v${AppConfig.version}',
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.muted),
-            ),
-          ],
           const Spacer(),
           IconButton(
             tooltip: 'Switch to collector app',
@@ -312,10 +295,9 @@ class _AdminTopBar extends StatelessWidget {
 }
 
 class _SidebarFooter extends StatelessWidget {
-  const _SidebarFooter({required this.extended, required this.live});
+  const _SidebarFooter({required this.extended});
 
   final bool extended;
-  final bool live;
 
   @override
   Widget build(BuildContext context) {
@@ -331,9 +313,7 @@ class _SidebarFooter extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              live
-                  ? 'Live Supabase data.\nPoints are server-calculated.'
-                  : 'Demo data only.\nConnect Supabase in Stage 1.',
+              'Points are calculated on the server.',
               style: Theme.of(context).textTheme.labelSmall
                   ?.copyWith(color: AppColors.forest, height: 1.4),
             ),

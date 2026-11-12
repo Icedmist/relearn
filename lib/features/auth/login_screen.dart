@@ -347,21 +347,14 @@ class _LoginForm extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              StatusPill(
-                label: live ? 'LIVE · SUPABASE' : 'DEMO MODE',
-                color: live ? AppColors.leaf : AppColors.sky,
-                icon: live ? Icons.cloud_done_outlined : Icons.science_outlined,
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'v${AppConfig.version}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.muted,
               ),
-              const Spacer(),
-              Text(
-                'v${AppConfig.version}',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppColors.muted,
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 28),
           Text('Welcome back', style: theme.textTheme.headlineLarge),

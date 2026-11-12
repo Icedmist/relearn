@@ -306,6 +306,42 @@ class SupabaseRepository {
     );
   }
 
+  /// Creates a staff account through Supabase Auth, then assigns its role.
+  /// Sign-up runs with the publishable key, so the admin's session is restored
+  /// immediately afterwards and the caller stays signed in.
+  Future<String> createStaffUser({
+    required String name,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    final auth = _client.auth;
+    final adminRefresh = auth.currentSession?.refreshToken;
+    AuthResponse response;
+    try {
+      response = await auth.signUp(
+        email: email,
+        password: password,
+        data: {'name': name},
+      );
+    } finally {
+      if (adminRefresh != null) {
+        await auth.setSession(adminRefresh);
+      }
+    }
+
+    final user = response.user;
+    if (user == null) {
+      throw AuthException('The account was not created.');
+    }
+
+    await _client
+        .from('profiles')
+        .update({'name': name, 'role': role})
+        .eq('id', user.id);
+    return user.id;
+  }
+
   /// Uploads an item photo to the public `item-images` bucket and returns its
   /// public URL. Storage RLS allows only admins to write.
   Future<String> uploadItemImage({

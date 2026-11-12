@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/session.dart';
-import '../../core/config/app_config.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/app_store.dart';
 
@@ -27,29 +25,10 @@ class CollectorShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appStoreProvider);
-    final narrow = MediaQuery.sizeOf(context).width < 480;
-    final live = state.isLive;
     return Scaffold(
       appBar: AppBar(
         title: const BrandLogo(height: 30),
         actions: [
-          if (narrow)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Icon(
-                live ? Icons.cloud_done_outlined : Icons.science_outlined,
-                size: 20,
-                color: live ? AppColors.leaf : AppColors.sky,
-              ),
-            )
-          else
-            StatusPill(
-              label: live
-                  ? 'LIVE · v${AppConfig.version}'
-                  : 'DEMO · v${AppConfig.version}',
-              color: live ? AppColors.leaf : AppColors.sky,
-              icon: live ? Icons.cloud_done_outlined : Icons.science_outlined,
-            ),
           const SizedBox(width: 8),
           IconButton(
             tooltip: 'Admin dashboard',
