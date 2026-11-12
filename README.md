@@ -93,6 +93,8 @@ school without developer help.
 - Admin dashboard with KPI cards, a 7-day chart, top materials and activity feed.
 - School management, beneficiary registration, QR preview, card print preview.
 - Materials and rates, rewards and stock, reports, user management.
+- Marketplace-style item shop: searchable, category-filtered cards with photos
+  or branded artwork, points, stock and an add/edit form for every field.
 - Collector home, simulated scan, search, beneficiary card, collection entry
   with a live points preview, redemption with balance and stock checks, history.
 - A working in-memory store: recording a collection really credits points;
@@ -241,6 +243,12 @@ flutter run -d chrome --dart-define-from-file=.env
 
 Live mode turns on automatically when credentials are present. Set
 `DEMO_MODE=true` in `.env` to force the in-memory store.
+
+**Demo vs live data:** demo mode runs entirely on seeded, in-memory data — no
+network, no persistence, and changes disappear on restart. Live mode reads and
+writes the Supabase project, so schools, items, points and redemptions are real
+and shared between devices. The hosted project currently contains seeded demo
+schools and items; replace them with real programme data before a pilot.
 
 ### Checks
 

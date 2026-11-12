@@ -6,7 +6,7 @@
 abstract final class AppConfig {
   static const appName = 'ReLearn';
   static const tagline = 'Recycle to Learn.';
-  static const version = '0.2.1';
+  static const version = '0.3.0';
 
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   static const supabaseAnonKey = String.fromEnvironment(

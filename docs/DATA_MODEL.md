@@ -110,6 +110,8 @@ Mirrors `auth.users`; created by trigger on signup.
 | stock | integer | ≥ 0, decremented in the redemption transaction |
 | active | boolean | |
 | image_url | text | public URL from the `item-images` bucket |
+| category | text | Stationery, Books, Bags, Maths, Art, Lunch, Other |
+| description | text | short shop copy |
 
 ### `redemptions`
 
@@ -221,6 +223,8 @@ reversing ledger entry, so the ledger sum always matches the displayed balance.
   educational supplies and point costs.
 - [`../supabase/migrations/0004_item_images.sql`](../supabase/migrations/0004_item_images.sql) —
   `item-images` Storage bucket, admin-only writes and `image_url` columns.
+- [`../supabase/migrations/0005_reward_details.sql`](../supabase/migrations/0005_reward_details.sql) —
+  category and description for marketplace cards.
 - [`../supabase/seed.sql`](../supabase/seed.sql) — starting materials, rewards and
   a demo school.
 

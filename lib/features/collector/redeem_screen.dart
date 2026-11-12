@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
+import '../../core/widgets/item_art.dart';
 import '../../data/app_store.dart';
 import '../../data/models.dart';
 
@@ -19,6 +20,7 @@ class RedeemScreen extends ConsumerStatefulWidget {
 class _RedeemScreenState extends ConsumerState<RedeemScreen> {
   String? _rewardId;
   int _qty = 1;
+  String _category = 'All';
 
   @override
   Widget build(BuildContext context) {
@@ -113,26 +115,95 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
                       ),
                     ),
                   const SizedBox(height: 22),
-                  Text(
-                    'Choose a reward',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  for (final reward in rewards)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _RewardOption(
-                        reward: reward,
-                        selected: _rewardId == reward.id,
-                        affordable: balance >= reward.pointsCost,
-                        onTap: reward.stock == 0
-                            ? null
-                            : () => setState(() {
-                                _rewardId = reward.id;
-                                _qty = 1;
-                              }),
+                  Row(
+                    children: [
+                      Text(
+                        'Item shop',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
+                      const Spacer(),
+                      Text(
+                        '${rewards.length} items',
+                        style: Theme.of(context).textTheme.labelSmall
+                            ?.copyWith(color: AppColors.muted),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Browse by category and pick a reward for this card.',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: AppColors.muted),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final category in [
+                          'All',
+                          ...{for (final reward in rewards) reward.category},
+                        ]) ...[
+                          ChoiceChip(
+                            label: Text(category),
+                            selected: _category == category,
+                            onSelected: (_) =>
+                                setState(() => _category = category),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ],
                     ),
+                  ),
+                  const SizedBox(height: 14),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth >= 620
+                          ? 3
+                          : constraints.maxWidth >= 400
+                          ? 2
+                          : 1;
+                      const gap = 10.0;
+                      final width =
+                          (constraints.maxWidth - gap * (columns - 1)) /
+                          columns;
+                      final visible = rewards
+                          .where(
+                            (r) =>
+                                _category == 'All' || r.category == _category,
+                          )
+                          .toList();
+                      if (visible.isEmpty) {
+                        return const EmptyState(
+                          icon: Icons.storefront_outlined,
+                          title: 'No items in this category',
+                          message: 'Pick another category to continue.',
+                        );
+                      }
+                      return Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: [
+                          for (final reward in visible)
+                            SizedBox(
+                              width: width,
+                              height: 208,
+                              child: _ShopCard(
+                                reward: reward,
+                                selected: _rewardId == reward.id,
+                                affordable: balance >= reward.pointsCost,
+                                onTap: reward.stock == 0
+                                    ? null
+                                    : () => setState(() {
+                                        _rewardId = reward.id;
+                                        _qty = 1;
+                                      }),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                   const SizedBox(height: 14),
                   if (selected != null)
                     Card(
@@ -140,6 +211,50 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: itemColor(selected.category)
+                                        .withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    itemIcon(selected.category),
+                                    size: 20,
+                                    color: itemColor(selected.category),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        selected.name,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                      Text(
+                                        '${selected.category} · ${formatPoints(selected.pointsCost)} pts each',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(color: AppColors.muted),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24),
                             Row(
                               children: [
                                 Text(
@@ -301,8 +416,8 @@ class _RedeemScreenState extends ConsumerState<RedeemScreen> {
   }
 }
 
-class _RewardOption extends StatelessWidget {
-  const _RewardOption({
+class _ShopCard extends StatelessWidget {
+  const _ShopCard({
     required this.reward,
     required this.selected,
     required this.affordable,
@@ -316,12 +431,13 @@ class _RewardOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final out = reward.stock == 0;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: selected
               ? AppColors.leaf.withValues(alpha: 0.06)
@@ -332,68 +448,78 @@ class _RewardOption extends StatelessWidget {
             width: selected ? 1.8 : 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.sun.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: const Icon(
-                Icons.card_giftcard,
-                color: Color(0xFF7A4F00),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    reward.name,
-                    style: Theme.of(context).textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+            Stack(
+              children: [
+                Opacity(
+                  opacity: out ? 0.45 : 1,
+                  child: ItemArt(
+                    category: reward.category,
+                    imageUrl: reward.imageUrl,
+                    height: 84,
+                    radius: 10,
                   ),
-                  Text(
-                    '${reward.stock} in stock',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: out ? AppColors.danger : AppColors.muted,
+                ),
+                if (selected)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: AppColors.leaf,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        size: 13,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ],
+              ],
+            ),
+            const SizedBox(height: 7),
+            Text(
+              reward.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                height: 1.2,
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            const SizedBox(height: 2),
+            Text(
+              reward.category,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: itemColor(reward.category),
+                fontSize: 10,
+              ),
+            ),
+            const Spacer(),
+            Row(
               children: [
                 Text(
                   '${formatPoints(reward.pointsCost)} pts',
                   style: TextStyle(
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: affordable ? AppColors.forest : AppColors.muted,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-                if (out)
-                  const Text(
-                    'Out of stock',
-                    style: TextStyle(fontSize: 10, color: AppColors.danger),
-                  )
-                else if (!affordable)
-                  const Text(
-                    'Can’t afford',
-                    style: TextStyle(fontSize: 10, color: AppColors.muted),
+                const Spacer(),
+                Text(
+                  out ? 'Out' : '${reward.stock} left',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: out ? AppColors.danger : AppColors.muted,
                   ),
+                ),
               ],
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              size: 19,
-              color: selected ? AppColors.leaf : AppColors.muted,
             ),
           ],
         ),

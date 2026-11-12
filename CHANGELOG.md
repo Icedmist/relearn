@@ -10,6 +10,24 @@ All notable changes to ReLearn are documented here. Format follows
 - Stage 2: camera scanning, offline queue, sync status.
 - Stage 3: PDF card export and printable batches.
 
+## [0.3.0] — 2026-11-12
+
+### Added
+- Marketplace-style item shop for collectors: category filters, photo/icon
+  cards, points and stock at a glance, and a selected-item detail panel.
+- Admin catalogue is now a marketplace preview with search, category filters,
+  artwork, descriptions, points and stock on every card.
+- Catalogue records gain `category` and `description` (migration `0005`); seeded
+  items are backfilled across Stationery, Books, Bags, Maths, Art and Lunch.
+- Add/edit item form manages name, category, description, points, stock, image
+  URL and shop visibility.
+- `ItemArt` widget shows uploaded photos from `item-images` and falls back to a
+  category-coloured icon tile.
+
+### Changed
+- Admin item cards can restock and edit every field without leaving the screen.
+- Collector shop shows only active items and filters instantly by category.
+
 ## [0.2.1] — 2026-11-12
 
 ### Fixed
@@ -93,7 +111,8 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Icedmist/relearn/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Icedmist/relearn/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Icedmist/relearn/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Icedmist/relearn/compare/v0.1.1...v0.1.2
