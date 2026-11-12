@@ -39,7 +39,7 @@ class CollectorHomeScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tuesday route · Gombe Model',
+                      '${formatDateRange(DateTime.now())} · Collection desk',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: AppColors.muted,
                         letterSpacing: 0.4,
@@ -251,7 +251,9 @@ class CollectorHomeScreen extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'All changes synced · 0 pending. Offline queue arrives in Stage 2.',
+                    state.isLive
+                        ? 'Connected to the programme database. Changes are saved immediately.'
+                        : 'Demo mode. Changes are not saved after you close the app.',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: AppColors.muted,
                     ),

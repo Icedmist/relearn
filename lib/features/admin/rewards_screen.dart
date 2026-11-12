@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -47,7 +50,9 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
         PageHeader(
           eyebrow: 'Catalogue',
           title: 'Item shop',
-          subtitle: 'Marketplace preview. Add photos, categories and descriptions; collectors see the same cards.',
+          subtitle:
+              'Marketplace preview. Add photos, categories and descriptions; '
+              'collectors see the same cards.',
           actions: [
             FilledButton.icon(
               onPressed: () => _showEditor(),
@@ -107,7 +112,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                 for (final reward in visible)
                   SizedBox(
                     width: width,
-                    height: 392,
+                    height: 404,
                     child: _RewardCard(
                       reward: reward,
                       redemptions: state.redemptions
@@ -115,6 +120,8 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                           .length,
                       onRestock: () => _showRestock(reward),
                       onEdit: () => _showEditor(reward),
+                      onToggleActive: () => _toggleActive(reward),
+                      onDelete: () => _delete(reward),
                     ),
                   ),
               ],
@@ -176,9 +183,9 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
     );
   }
 
-  void _showRestock(Reward reward) {
+  Future<void> _showRestock(Reward reward) async {
     final qty = TextEditingController(text: '50');
-    showDialog<void>(
+    final value = await showDialog<int>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Restock ${reward.name}'),
@@ -186,6 +193,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
           width: 360,
           child: TextField(
             controller: qty,
+            autofocus: true,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               labelText: 'Quantity to add',
@@ -200,46 +208,128 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
           ),
           FilledButton(
             onPressed: () {
-              final value = int.tryParse(qty.text);
-              if (value == null || value <= 0) return;
-              ref.read(appStoreProvider.notifier).restock(reward.id, value);
-              Navigator.pop(dialogContext);
+              final parsed = int.tryParse(qty.text.trim());
+              if (parsed == null || parsed <= 0) return;
+              Navigator.pop(dialogContext, parsed);
             },
             child: const Text('Add stock'),
           ),
         ],
       ),
     );
+    qty.dispose();
+    if (value == null || !mounted) return;
+    final error = await ref
+        .read(appStoreProvider.notifier)
+        .restock(reward.id, value);
+    if (!mounted) return;
+    _notify(error ?? 'Added $value to ${reward.name}.');
+  }
+
+  Future<void> _toggleActive(Reward reward) async {
+    final error = await ref
+        .read(appStoreProvider.notifier)
+        .updateReward(reward.id, active: !reward.active);
+    if (!mounted) return;
+    _notify(
+      error ??
+          (reward.active
+              ? '${reward.name} hidden from the shop.'
+              : '${reward.name} is visible in the shop.'),
+    );
+  }
+
+  Future<void> _delete(Reward reward) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete ${reward.name}?'),
+        content: const Text(
+          'This permanently removes the item. If it already has redemptions, '
+          'deactivate it instead so history stays intact.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final error = await ref
+        .read(appStoreProvider.notifier)
+        .deleteReward(reward.id);
+    if (!mounted) return;
+    _notify(error ?? '${reward.name} deleted.');
   }
 
   Future<void> _showEditor([Reward? reward]) async {
-    final draft = await showDialog<_RewardDraft>(
+    await showDialog<void>(
       context: context,
-      builder: (_) => _RewardDialog(reward: reward),
+      barrierDismissible: false,
+      builder: (_) => _RewardDialog(
+        reward: reward,
+        onSave: (draft) async {
+          final store = ref.read(appStoreProvider.notifier);
+          var imageUrl = draft.imageUrl;
+          var clearImage = false;
+          if (draft.imageBytes != null) {
+            final name = draft.imageName ?? 'item.jpg';
+            final lower = name.toLowerCase();
+            final contentType = lower.endsWith('.png')
+                ? 'image/png'
+                : lower.endsWith('.webp')
+                ? 'image/webp'
+                : 'image/jpeg';
+            final upload = await store.uploadItemImage(
+              bytes: draft.imageBytes!,
+              fileName: name,
+              contentType: contentType,
+            );
+            if (upload.error != null) return upload.error;
+            imageUrl = upload.url;
+          } else if (imageUrl == null || imageUrl.isEmpty) {
+            clearImage = true;
+          }
+
+          if (reward == null) {
+            return store.addReward(
+              name: draft.name,
+              pointsCost: draft.pointsCost,
+              stock: draft.stock,
+              category: draft.category,
+              description: draft.description,
+              imageUrl: imageUrl,
+            );
+          }
+          return store.updateReward(
+            reward.id,
+            name: draft.name,
+            pointsCost: draft.pointsCost,
+            stock: draft.stock,
+            active: draft.active,
+            category: draft.category,
+            description: draft.description,
+            imageUrl: imageUrl,
+            clearImage: clearImage,
+            clearDescription: draft.description == null,
+          );
+        },
+      ),
     );
-    if (draft == null) return;
-    final store = ref.read(appStoreProvider.notifier);
-    if (reward == null) {
-      store.addReward(
-        name: draft.name,
-        pointsCost: draft.pointsCost,
-        stock: draft.stock,
-        category: draft.category,
-        description: draft.description,
-        imageUrl: draft.imageUrl,
-      );
-    } else {
-      store.updateReward(
-        reward.id,
-        name: draft.name,
-        pointsCost: draft.pointsCost,
-        stock: draft.stock,
-        active: draft.active,
-        category: draft.category,
-        description: draft.description,
-        imageUrl: draft.imageUrl,
-      );
-    }
+  }
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -249,22 +339,35 @@ class _RewardCard extends StatelessWidget {
     required this.redemptions,
     required this.onRestock,
     required this.onEdit,
+    required this.onToggleActive,
+    required this.onDelete,
   });
 
   final Reward reward;
   final int redemptions;
   final VoidCallback onRestock;
   final VoidCallback onEdit;
+  final VoidCallback onToggleActive;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final low = reward.stock <= 10;
     final out = reward.stock == 0;
-    final color = out
+    final color = !reward.active
+        ? AppColors.muted
+        : out
         ? AppColors.danger
         : low
         ? const Color(0xFFB45309)
         : AppColors.leaf;
+    final status = !reward.active
+        ? 'HIDDEN'
+        : out
+        ? 'OUT OF STOCK'
+        : low
+        ? 'LOW STOCK'
+        : 'IN STOCK';
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -290,14 +393,7 @@ class _RewardCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                StatusPill(
-                  label: out
-                      ? 'OUT OF STOCK'
-                      : low
-                      ? 'LOW STOCK'
-                      : 'IN STOCK',
-                  color: color,
-                ),
+                StatusPill(label: status, color: color),
               ],
             ),
             const SizedBox(height: 6),
@@ -363,11 +459,32 @@ class _RewardCard extends StatelessWidget {
                     label: const Text('Restock'),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 IconButton(
                   onPressed: onEdit,
                   tooltip: 'Edit item',
                   icon: const Icon(Icons.edit_outlined, size: 18),
+                ),
+                PopupMenuButton<_ItemAction>(
+                  tooltip: 'More actions',
+                  onSelected: (action) => switch (action) {
+                    _ItemAction.toggle => onToggleActive(),
+                    _ItemAction.delete => onDelete(),
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: _ItemAction.toggle,
+                      child: Text(
+                        reward.active
+                            ? 'Deactivate (hide from shop)'
+                            : 'Activate (show in shop)',
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: _ItemAction.delete,
+                      child: Text('Delete permanently'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -378,6 +495,8 @@ class _RewardCard extends StatelessWidget {
   }
 }
 
+enum _ItemAction { toggle, delete }
+
 class _RewardDraft {
   const _RewardDraft({
     required this.name,
@@ -387,6 +506,8 @@ class _RewardDraft {
     required this.description,
     required this.imageUrl,
     required this.active,
+    this.imageBytes,
+    this.imageName,
   });
 
   final String name;
@@ -396,12 +517,15 @@ class _RewardDraft {
   final String? description;
   final String? imageUrl;
   final bool active;
+  final Uint8List? imageBytes;
+  final String? imageName;
 }
 
 class _RewardDialog extends StatefulWidget {
-  const _RewardDialog({this.reward});
+  const _RewardDialog({this.reward, required this.onSave});
 
   final Reward? reward;
+  final Future<String?> Function(_RewardDraft draft) onSave;
 
   @override
   State<_RewardDialog> createState() => _RewardDialogState();
@@ -409,6 +533,7 @@ class _RewardDialog extends StatefulWidget {
 
 class _RewardDialogState extends State<_RewardDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _picker = ImagePicker();
   late final TextEditingController _name;
   late final TextEditingController _points;
   late final TextEditingController _stock;
@@ -416,6 +541,10 @@ class _RewardDialogState extends State<_RewardDialog> {
   late final TextEditingController _imageUrl;
   late String _category;
   late bool _active;
+  Uint8List? _imageBytes;
+  String? _imageName;
+  bool _saving = false;
+  String? _error;
 
   bool get _editing => widget.reward != null;
 
@@ -444,12 +573,52 @@ class _RewardDialogState extends State<_RewardDialog> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final file = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 82,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.lengthInBytes > 5 * 1024 * 1024) {
+        if (!mounted) return;
+        setState(() {
+          _error = 'That photo is larger than 5 MB. Choose a smaller image.';
+        });
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _imageBytes = bytes;
+        _imageName = file.name;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not open the photo picker: $error');
+    }
+  }
+
+  void _removePhoto() {
+    setState(() {
+      _imageBytes = null;
+      _imageName = null;
+      _imageUrl.clear();
+      _error = null;
+    });
+  }
+
+  Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final description = _description.text.trim();
     final imageUrl = _imageUrl.text.trim();
-    Navigator.pop(
-      context,
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final error = await widget.onSave(
       _RewardDraft(
         name: _name.text.trim(),
         pointsCost: int.parse(_points.text.trim()),
@@ -458,17 +627,29 @@ class _RewardDialogState extends State<_RewardDialog> {
         description: description.isEmpty ? null : description,
         imageUrl: imageUrl.isEmpty ? null : imageUrl,
         active: _active,
+        imageBytes: _imageBytes,
+        imageName: _imageName,
       ),
     );
+    if (!mounted) return;
+    if (error != null) {
+      setState(() {
+        _saving = false;
+        _error = error;
+      });
+      return;
+    }
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasPhoto = _imageBytes != null || _imageUrl.text.trim().isNotEmpty;
     return AlertDialog(
       title: Text(_editing ? 'Edit item' : 'Add item'),
       content: SizedBox(
-        width: 440,
+        width: 460,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -476,9 +657,50 @@ class _RewardDialogState extends State<_RewardDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _PhotoPreview(
+                  bytes: _imageBytes,
+                  url: _imageBytes == null ? _imageUrl.text.trim() : null,
+                  category: _category,
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _saving
+                          ? null
+                          : () => _pickImage(ImageSource.gallery),
+                      icon: const Icon(Icons.photo_library_outlined, size: 17),
+                      label: const Text('Gallery'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _saving
+                          ? null
+                          : () => _pickImage(ImageSource.camera),
+                      icon: const Icon(Icons.photo_camera_outlined, size: 17),
+                      label: const Text('Camera'),
+                    ),
+                    if (hasPhoto)
+                      TextButton.icon(
+                        onPressed: _saving ? null : _removePhoto,
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          size: 17,
+                          color: AppColors.danger,
+                        ),
+                        label: const Text(
+                          'Remove photo',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _name,
                   textInputAction: TextInputAction.next,
+                  enabled: !_saving,
                   decoration: const InputDecoration(
                     labelText: 'Item name',
                     hintText: 'e.g. Geometry set',
@@ -495,13 +717,15 @@ class _RewardDialogState extends State<_RewardDialog> {
                     for (final category in itemCategories)
                       DropdownMenuItem(value: category, child: Text(category)),
                   ],
-                  onChanged: (value) =>
-                      setState(() => _category = value ?? 'Other'),
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _category = value ?? 'Other'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _description,
                   maxLines: 2,
+                  enabled: !_saving,
                   decoration: const InputDecoration(
                     labelText: 'Description',
                     hintText: 'Short line shown in the shop',
@@ -514,6 +738,7 @@ class _RewardDialogState extends State<_RewardDialog> {
                       child: TextFormField(
                         controller: _points,
                         keyboardType: TextInputType.number,
+                        enabled: !_saving,
                         decoration: const InputDecoration(labelText: 'Points'),
                         validator: (value) {
                           final points = int.tryParse((value ?? '').trim());
@@ -528,6 +753,7 @@ class _RewardDialogState extends State<_RewardDialog> {
                       child: TextFormField(
                         controller: _stock,
                         keyboardType: TextInputType.number,
+                        enabled: !_saving,
                         decoration: const InputDecoration(labelText: 'Stock'),
                         validator: (value) {
                           final stock = int.tryParse((value ?? '').trim());
@@ -544,10 +770,13 @@ class _RewardDialogState extends State<_RewardDialog> {
                   controller: _imageUrl,
                   keyboardType: TextInputType.url,
                   autocorrect: false,
+                  enabled: !_saving,
+                  onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(
                     labelText: 'Image URL (optional)',
                     hintText: 'https://…/item-images/photo.jpg',
-                    helperText: 'Upload photos to the item-images bucket, then paste the public URL.',
+                    helperText:
+                        'Upload a photo above, or paste a public image URL.',
                     helperMaxLines: 2,
                   ),
                 ),
@@ -560,7 +789,28 @@ class _RewardDialogState extends State<_RewardDialog> {
                       style: theme.textTheme.bodyMedium,
                     ),
                     value: _active,
-                    onChanged: (value) => setState(() => _active = value),
+                    onChanged: _saving
+                        ? null
+                        : (value) => setState(() => _active = value),
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -570,14 +820,70 @@ class _RewardDialogState extends State<_RewardDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _saving ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _submit,
-          child: Text(_editing ? 'Save changes' : 'Add item'),
+          onPressed: _saving ? null : _submit,
+          child: _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(_editing ? 'Save changes' : 'Add item'),
         ),
       ],
+    );
+  }
+}
+
+class _PhotoPreview extends StatelessWidget {
+  const _PhotoPreview({
+    required this.bytes,
+    required this.url,
+    required this.category,
+  });
+
+  final Uint8List? bytes;
+  final String? url;
+  final String category;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = itemColor(category);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 150,
+        width: double.infinity,
+        color: tint.withValues(alpha: 0.1),
+        child: bytes != null
+            ? Image.memory(bytes!, fit: BoxFit.cover)
+            : url != null && url!.isNotEmpty
+            ? Image.network(
+                url!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _placeholder(tint),
+              )
+            : _placeholder(tint),
+      ),
+    );
+  }
+
+  Widget _placeholder(Color tint) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(itemIcon(category), size: 38, color: tint),
+          const SizedBox(height: 6),
+          Text('No photo yet', style: TextStyle(color: tint, fontSize: 12)),
+        ],
+      ),
     );
   }
 }

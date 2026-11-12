@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/auth/session.dart';
 import '../../core/widgets/common.dart';
 import '../../data/app_store.dart';
 
@@ -36,9 +35,9 @@ class CollectorShell extends ConsumerWidget {
             icon: const Icon(Icons.dashboard_outlined, size: 20),
           ),
           IconButton(
-            tooltip: 'Sign out',
-            onPressed: () => signOutAndGo(context, ref),
-            icon: const Icon(Icons.logout, size: 19),
+            tooltip: 'Account',
+            onPressed: () => context.push('/account'),
+            icon: const Icon(Icons.account_circle_outlined, size: 20),
           ),
           const SizedBox(width: 6),
         ],

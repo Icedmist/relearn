@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/auth/session_lock.dart';
 import '../../core/config/app_config.dart';
+import '../../core/services/app_prefs.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/app_store.dart';
@@ -51,7 +53,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     await ref.read(appStoreProvider.notifier).reload();
     if (!mounted) return;
-    context.go(role == 'admin' ? '/admin/dashboard' : '/collector/home');
+    await _goAfterAuth(role);
+    ref.read(sessionLockProvider.notifier).checkNow();
+  }
+
+  Future<void> _goAfterAuth(String role) async {
+    final home = role == 'admin' ? '/admin/dashboard' : '/collector/home';
+    if (!AppPrefs.onboardingSeen) {
+      context.go('/onboarding?next=${Uri.encodeQueryComponent(home)}');
+      return;
+    }
+    context.go(home);
+  }
+
+  Future<void> _openGuide() async {
+    final home = _isAdmin ? '/admin/dashboard' : '/collector/home';
+    context.push('/onboarding?next=${Uri.encodeQueryComponent(home)}');
   }
 
   Future<String> _currentRole() async {
@@ -72,7 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_live) {
       await Future<void>.delayed(const Duration(milliseconds: 550));
       if (!mounted) return;
-      context.go(_isAdmin ? '/admin/dashboard' : '/collector/home');
+      await _goAfterAuth(_isAdmin ? 'admin' : 'collector');
       return;
     }
 
@@ -84,7 +101,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final role = await _currentRole();
       await ref.read(appStoreProvider.notifier).reload();
       if (!mounted) return;
-      context.go(role == 'admin' ? '/admin/dashboard' : '/collector/home');
+      ref.read(sessionLockProvider.notifier).recordActivity();
+      await _goAfterAuth(role);
     } on AuthException catch (error) {
       _notify(error.message);
     } catch (error) {
@@ -137,6 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onRoleChanged: (admin) => setState(() => _isAdmin = admin),
             onSubmit: _signIn,
             onForgotPassword: _resetPassword,
+            onOpenGuide: _openGuide,
           );
           if (!wide) {
             return SafeArea(
@@ -325,6 +344,7 @@ class _LoginForm extends StatelessWidget {
     required this.onRoleChanged,
     required this.onSubmit,
     required this.onForgotPassword,
+    required this.onOpenGuide,
   });
 
   final GlobalKey<FormState> formKey;
@@ -338,6 +358,7 @@ class _LoginForm extends StatelessWidget {
   final ValueChanged<bool> onRoleChanged;
   final VoidCallback onSubmit;
   final VoidCallback onForgotPassword;
+  final VoidCallback onOpenGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -488,43 +509,15 @@ class _LoginForm extends StatelessWidget {
                     ),
             ),
           ),
-          if (!live) ...[
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    'or jump straight in',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.muted,
-                    ),
-                  ),
-                ),
-                const Expanded(child: Divider()),
-              ],
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton.icon(
+              onPressed: onOpenGuide,
+              icon: const Icon(Icons.menu_book_outlined, size: 18),
+              label: const Text('How ReLearn works'),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => context.go('/admin/dashboard'),
-                    child: const Text('Admin demo'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => context.go('/collector/home'),
-                    child: const Text('Collector demo'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 28),
+          ),
+          const SizedBox(height: 16),
           Text(
             'By signing in you agree to the pilot data protection policy. '
             'Only authorised programme staff can access beneficiary records.',

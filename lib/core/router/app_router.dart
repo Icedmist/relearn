@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
+import '../../features/account/account_screen.dart';
 import '../../features/admin/admin_shell.dart';
 import '../../features/admin/beneficiaries_screen.dart';
 import '../../features/admin/beneficiary_profile_screen.dart';
@@ -23,6 +24,7 @@ import '../../features/collector/redeem_screen.dart';
 import '../../features/collector/scan_screen.dart';
 import '../../features/collector/search_screen.dart';
 import '../../features/collector/success_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
@@ -31,12 +33,23 @@ final appRouter = GoRouter(
     if (state.uri.path == '/collector') return '/collector/home';
     if (!AppConfig.demoMode) {
       final signedIn = Supabase.instance.client.auth.currentSession != null;
-      if (!signedIn && state.uri.path != '/login') return '/login';
+      final publicRoute =
+          state.uri.path == '/login' || state.uri.path == '/onboarding';
+      if (!signedIn && !publicRoute) return '/login';
     }
     return null;
   },
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) =>
+          OnboardingScreen(next: state.uri.queryParameters['next']),
+    ),
+    GoRoute(
+      path: '/account',
+      builder: (context, state) => const AccountScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) =>
           AdminShell(location: state.uri.path, child: child),

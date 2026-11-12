@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/app_store.dart';
 
@@ -13,7 +14,6 @@ class ScanScreen extends ConsumerStatefulWidget {
 }
 
 class _ScanScreenState extends ConsumerState<ScanScreen> {
-  bool _torch = false;
   bool _handling = false;
 
   void _found(String beneficiaryId) {
@@ -22,7 +22,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     context.pushReplacement('/collector/beneficiary/$beneficiaryId');
   }
 
-  void _simulateScan() {
+  void _openSampleCard() {
     final state = ref.read(appStoreProvider);
     if (state.beneficiaries.isEmpty) return;
     _found(state.beneficiaries.first.id);
@@ -86,25 +86,18 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: const Text('Scan QR card'),
+        title: const Text('Find a pupil'),
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.close),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Flashlight',
-            onPressed: () => setState(() => _torch = !_torch),
-            icon: Icon(_torch ? Icons.flashlight_on : Icons.flashlight_off),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 12),
             Text(
-              'Point the camera at the QR on the card',
+              'Enter the card ID to open a pupil',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 14,
@@ -112,7 +105,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'The scan is debounced so one card cannot credit twice.',
+              'Camera scanning is not enabled in this build. Use the public ID '
+              'printed under the QR code.',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.45),
                 fontSize: 11.5,
@@ -168,7 +163,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                   SizedBox(width: 7),
                   Flexible(
                     child: Text(
-                      'Camera preview · simulated in Stage 0',
+                      'Camera scanning is not enabled in this build',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.white70, fontSize: 11.5),
@@ -182,20 +177,22 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: Column(
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _simulateScan,
-                      icon: const Icon(Icons.qr_code_scanner, size: 20),
-                      label: const Text('Simulate a successful scan'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.sun,
-                        foregroundColor: AppColors.ink,
-                        minimumSize: const Size(0, 56),
+                  if (AppConfig.demoMode) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _openSampleCard,
+                        icon: const Icon(Icons.qr_code_scanner, size: 20),
+                        label: const Text('Open a sample card'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.sun,
+                          foregroundColor: AppColors.ink,
+                          minimumSize: const Size(0, 56),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
+                  ],
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -213,8 +210,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Stage 2 replaces this with mobile_scanner and a real camera request. '
-                    'Permission denied and camera errors are handled there.',
+                    'The public ID is printed on every card. The last character '
+                    'is a check character.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.4),

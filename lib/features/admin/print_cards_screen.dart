@@ -78,7 +78,7 @@ class _PrintCardsScreenState extends ConsumerState<PrintCardsScreen> {
                       SnackBar(
                         content: Text(
                           'PDF export for ${_selected.isEmpty ? filtered.length : _selected.length} '
-                          'card(s) is wired in Stage 1 (pdf + printing).',
+                          'card(s). PDF export is not available in this build.',
                         ),
                       ),
                     ),

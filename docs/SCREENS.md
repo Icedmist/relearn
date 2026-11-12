@@ -1,8 +1,7 @@
 # ReLearn — Screen Specification
 
-Every screen below exists as a route in the scaffold and is clickable in demo
-mode. Widgets marked **[wire]** currently use demo data and are ready for a
-Supabase repository.
+Every screen below exists as a route. Live mode reads and writes Supabase; demo
+mode uses the in-memory seed and never touches the network.
 
 ---
 
@@ -11,6 +10,8 @@ Supabase repository.
 | Route | Screen | Role | File |
 |---|---|---|---|
 | `/login` | Login / role select | Public | `features/auth/login_screen.dart` |
+| `/onboarding` | Onboarding / how-to | Public | `features/onboarding/onboarding_screen.dart` |
+| `/account` | Account centre | Staff | `features/account/account_screen.dart` |
 | `/admin/dashboard` | Dashboard | Admin | `features/admin/dashboard_screen.dart` |
 | `/admin/schools` | Schools | Admin | `features/admin/schools_screen.dart` |
 | `/admin/beneficiaries` | Beneficiaries | Admin | `features/admin/beneficiaries_screen.dart` |
@@ -18,7 +19,7 @@ Supabase repository.
 | `/admin/beneficiaries/:id` | Beneficiary profile | Admin | `features/admin/beneficiary_profile_screen.dart` |
 | `/admin/print` | Print cards | Admin | `features/admin/print_cards_screen.dart` |
 | `/admin/materials` | Materials & points | Admin | `features/admin/materials_screen.dart` |
-| `/admin/rewards` | Rewards & stock | Admin | `features/admin/rewards_screen.dart` |
+| `/admin/rewards` | Item shop | Admin | `features/admin/rewards_screen.dart` |
 | `/admin/reports` | Reports | Admin | `features/admin/reports_screen.dart` |
 | `/admin/users` | Users | Admin | `features/admin/users_screen.dart` |
 | `/collector/home` | Home | Collector | `features/collector/home_screen.dart` |
@@ -44,16 +45,51 @@ column on mobile. Brand panel shows logo, tagline, and a one-line explanation.
 
 **Content**
 - Email, password, show/hide password.
-- "Sign in" primary button.
-- Demo mode: "Continue as Admin" and "Continue as Collector" (scaffold only).
-- Forgot password link (P1).
-- Version and environment badge in the footer.
+- "Sign in" primary button and forgot-password link.
+- "How ReLearn works" link to `/onboarding`.
+- Demo mode: prefilled demo credentials and a role selector; no production
+  shortcuts.
+- Version in the footer.
 
 **States:** idle, loading, invalid credentials, server unreachable, account
-deactivated.
+deactivated, onboarding required.
 
-**Actions:** sign in → `/admin/dashboard` or `/collector/home`; demo buttons
-bypass auth only while `AppConfig.demoMode` is true.
+**Actions:** sign in → onboarding (first run) or role home. Demo mode still uses
+the in-memory store and never locks.
+
+---
+
+## 1a. Onboarding `/onboarding`
+
+**Purpose:** explain the collection loop on first sign-in and from "How to use".
+
+**Content**
+- Four pages: welcome, collect, redeem, staff tools.
+- Page dots, Back, Next, Skip and Get started.
+- `next` query parameter decides where to continue (default `/login`).
+
+**States:** first run, replay from Account, opened from login.
+
+**Actions:** finish/skip marks `relearn.onboarding_seen` and navigates to `next`.
+
+---
+
+## 1b. Account centre `/account`
+
+**Purpose:** let any signed-in staff member manage their own account.
+
+**Content**
+- Profile card: name, email, role, initials and edit-name action.
+- Security: change password, fingerprint/face unlock toggle (Android/iOS),
+  session-lock explanation and "Lock now".
+- App: replay the guide, version, data-mode note.
+- Sign out with confirmation.
+
+**States:** demo mode (editing disabled, clear notice), biometrics unavailable,
+biometric confirmation failed, password updated, name updated, save error.
+
+**Actions:** update name via `update_my_name`, update password via Supabase Auth,
+toggle biometrics, lock the session, sign out.
 
 ---
 
@@ -255,16 +291,15 @@ session for 30 days (P1).
 **Purpose:** identify a beneficiary fast.
 
 **Content**
-- Full-screen camera preview (`mobile_scanner`).
-- Scan frame with corner brackets, instruction text.
-- Flashlight toggle, camera switch.
-- "Enter ID manually" fallback.
-- Haptic + sound on successful scan.
+- Full-screen lookup UI with a scan frame and instructions.
+- Camera scanning is **not enabled in this build**; the screen says so.
+- "Enter ID manually" opens a beneficiary by public ID.
+- "Open a sample card" in demo mode only.
 
-**States:** permission denied (link to settings), camera error, unknown ID,
-blocked card, inactive beneficiary, duplicate scan debounce (1.5 s).
+**States:** unknown ID, blocked card, inactive beneficiary.
 
-**Rules:** scanning pauses after a hit to prevent double navigation.
+**Rules:** the public ID is validated against the loaded beneficiary list before
+navigation.
 
 ---
 
@@ -354,7 +389,8 @@ sync (re-check balance).
 - Today's totals.
 - Transaction list (time, beneficiary, type, points, sync state).
 - Tap → detail with lines and collector.
-- "Request void" with reason (P1); shows pending/approved/rejected.
+- "Request void" opens a reason dialog; void requests are not available in this
+  build, so the dialog explains that an admin must adjust the balance instead.
 - Date picker to view previous days.
 
 ---

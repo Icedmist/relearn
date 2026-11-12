@@ -60,9 +60,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             FilledButton.icon(
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
-                    'CSV export for ${_tab.name} is wired in Stage 1 (csv package).',
-                  ),
+                  content: Text('CSV export is not available in this build.'),
                 ),
               ),
               icon: const Icon(Icons.download_outlined, size: 18),

@@ -11,6 +11,8 @@
 | Backend | **Supabase** | Managed Postgres, email auth, Row Level Security, RPC for atomic point operations |
 | QR scan | **mobile_scanner** | Maintained, fast, Android + web support, MLKit-based |
 | QR generate | **qr_flutter** | Pure Dart, no paid service, works offline |
+| Session security | **local_auth** + **shared_preferences** | Biometric unlock with password fallback; persisted idle state |
+| Item photos | **image_picker** + Supabase Storage | Gallery or camera upload to the `item-images` bucket |
 | PDF cards | **pdf** + **printing** | On-device PDF generation and print/share sheet |
 | Hosting | **Vercel** (web) + **Play Store internal track** (Android) | Zero-cost static hosting for Flutter Web; easy APK distribution |
 | Charts | **fl_chart** | Lightweight, no licence issues |

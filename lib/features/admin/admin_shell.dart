@@ -52,7 +52,7 @@ const _items = [
     '/admin/rewards',
     Icons.card_giftcard_outlined,
     Icons.card_giftcard_rounded,
-    'Rewards & stock',
+    'Item shop',
   ),
   _NavItem(
     '/admin/reports',
@@ -152,8 +152,9 @@ class AdminShell extends ConsumerWidget {
                     child: Column(
                       children: [
                         _AdminTopBar(
-                          name: state.profile?.name ?? 'Abdullahi A.',
-                          role: state.profile?.roleLabel ?? 'Programme admin',
+                          name: state.profile?.name ?? 'Staff',
+                          role: state.profile?.roleLabel ?? 'Programme staff',
+                          onAccount: () => context.push('/account'),
                           onSignOut: () => signOutAndGo(context, ref),
                         ),
                         Expanded(child: content),
@@ -172,7 +173,7 @@ class AdminShell extends ConsumerWidget {
             actions: [
               IconButton(
                 tooltip: 'Account',
-                onPressed: () => signOutAndGo(context, ref),
+                onPressed: () => context.push('/account'),
                 icon: const Icon(Icons.account_circle_outlined),
               ),
             ],
@@ -212,6 +213,14 @@ class AdminShell extends ConsumerWidget {
                   ),
                   const Divider(),
                   ListTile(
+                    leading: const Icon(Icons.account_circle_outlined),
+                    title: const Text('Account'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/account');
+                    },
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.logout),
                     title: const Text('Sign out'),
                     onTap: () => signOutAndGo(context, ref),
@@ -231,11 +240,13 @@ class _AdminTopBar extends StatelessWidget {
   const _AdminTopBar({
     required this.name,
     required this.role,
+    required this.onAccount,
     required this.onSignOut,
   });
 
   final String name;
   final String role;
+  final VoidCallback onAccount;
   final VoidCallback onSignOut;
 
   @override
@@ -261,19 +272,31 @@ class _AdminTopBar extends StatelessWidget {
             icon: const Icon(Icons.qr_code_scanner, size: 20),
           ),
           const SizedBox(width: 4),
-          InitialsAvatar(initials: _initials(name), size: 34),
-          const SizedBox(width: 10),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: Theme.of(context).textTheme.labelLarge),
-              Text(
-                role,
-                style: Theme.of(context).textTheme.labelSmall
-                    ?.copyWith(color: AppColors.muted),
+          InkWell(
+            onTap: onAccount,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InitialsAvatar(initials: _initials(name), size: 34),
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: Theme.of(context).textTheme.labelLarge),
+                      Text(
+                        role,
+                        style: Theme.of(context).textTheme.labelSmall
+                            ?.copyWith(color: AppColors.muted),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           const SizedBox(width: 8),
           IconButton(

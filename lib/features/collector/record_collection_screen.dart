@@ -303,7 +303,8 @@ class _RecordCollectionScreenState
                         const SizedBox(width: 9),
                         Expanded(
                           child: Text(
-                            'Online · will submit immediately. Offline queue arrives in Stage 2 with an idempotency key.',
+                            'The collection is saved immediately and points are '
+                            'credited to the card in the same transaction.',
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(color: AppColors.muted, height: 1.4),
                           ),

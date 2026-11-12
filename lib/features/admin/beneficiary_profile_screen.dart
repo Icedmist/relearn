@@ -25,7 +25,7 @@ class BeneficiaryProfileScreen extends ConsumerWidget {
       return const EmptyState(
         icon: Icons.person_off_outlined,
         title: 'Beneficiary not found',
-        message: 'This record may have been removed from the demo data.',
+        message: 'This record may have been removed or deactivated.',
       );
     }
 
@@ -50,7 +50,7 @@ class BeneficiaryProfileScreen extends ConsumerWidget {
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'Card PDF generation is wired in Stage 1 (pdf + printing).',
+                    'Card PDF export is not available in this build.',
                   ),
                 ),
               ),

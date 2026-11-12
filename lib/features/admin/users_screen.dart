@@ -155,7 +155,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
   Future<void> _reset(StaffUser user) async {
     if (!_live) {
-      _notify('Password reset link sent to ${user.email} (simulated).');
+      _notify('Password reset is not available in demo mode.');
       return;
     }
     try {

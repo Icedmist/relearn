@@ -869,14 +869,14 @@ class AppStore extends Notifier<AppState> {
     );
   }
 
-  void addReward({
+  Future<String?> addReward({
     required String name,
     required int pointsCost,
     required int stock,
     String category = 'Other',
     String? description,
     String? imageUrl,
-  }) {
+  }) async {
     final repo = _repo;
     if (repo == null) {
       state = state.copyWith(
@@ -894,18 +894,23 @@ class AppStore extends Notifier<AppState> {
           ),
         ],
       );
-      return;
+      return null;
     }
-    _write(
-      repo.addReward(
+    try {
+      await repo.addReward(
         name: name,
         pointsCost: pointsCost,
         stock: stock,
         category: category,
         description: description,
         imageUrl: imageUrl,
-      ),
-    );
+      );
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      _fail(error);
+      return _message(error);
+    }
   }
 
   void updateMaterial(
@@ -940,7 +945,7 @@ class AppStore extends Notifier<AppState> {
     }
   }
 
-  void updateReward(
+  Future<String?> updateReward(
     String id, {
     String? name,
     int? pointsCost,
@@ -949,47 +954,139 @@ class AppStore extends Notifier<AppState> {
     String? category,
     String? description,
     String? imageUrl,
-  }) {
+    bool clearImage = false,
+    bool clearDescription = false,
+  }) async {
     state = state.copyWith(
       rewards: [
         for (final r in state.rewards)
           if (r.id == id)
-            r.copyWith(
-              name: name,
-              pointsCost: pointsCost,
-              stock: stock,
-              active: active,
-              category: category,
-              description: description,
-              imageUrl: imageUrl,
+            Reward(
+              id: r.id,
+              name: name ?? r.name,
+              pointsCost: pointsCost ?? r.pointsCost,
+              stock: stock ?? r.stock,
+              active: active ?? r.active,
+              category: category ?? r.category,
+              description: clearDescription
+                  ? null
+                  : (description ?? r.description),
+              imageUrl: clearImage ? null : (imageUrl ?? r.imageUrl),
             )
           else
             r,
       ],
     );
     final repo = _repo;
-    if (repo != null) {
-      _write(
-        repo.updateReward(
-          id,
-          name: name,
-          pointsCost: pointsCost,
-          stock: stock,
-          active: active,
-          category: category,
-          description: description,
-          imageUrl: imageUrl,
-        ),
+    if (repo == null) return null;
+    try {
+      await repo.updateReward(
+        id,
+        name: name,
+        pointsCost: pointsCost,
+        stock: stock,
+        active: active,
+        category: category,
+        description: description,
+        imageUrl: imageUrl,
+        clearImage: clearImage,
+        clearDescription: clearDescription,
       );
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      _fail(error);
+      await reload(showLoading: false);
+      return _message(error);
     }
   }
 
-  void restock(String id, int qty) {
-    final reward = state.rewardById(id);
-    if (reward == null) return;
-    updateReward(id, stock: reward.stock + qty);
+  Future<String?> deleteReward(String id) async {
     final repo = _repo;
-    if (repo != null) _write(repo.restock(id, qty));
+    if (repo == null) {
+      state = state.copyWith(
+        rewards: [
+          for (final reward in state.rewards)
+            if (reward.id != id) reward,
+        ],
+      );
+      return null;
+    }
+    try {
+      await repo.deleteReward(id);
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      if (error is PostgrestException && error.code == '23503') {
+        return 'This item has past redemptions. Deactivate it instead.';
+      }
+      _fail(error);
+      return _message(error);
+    }
+  }
+
+  Future<String?> restock(String id, int qty) async {
+    final repo = _repo;
+    if (repo == null) {
+      final reward = state.rewardById(id);
+      if (reward == null) return 'Item not found.';
+      state = state.copyWith(
+        rewards: [
+          for (final item in state.rewards)
+            if (item.id == id) item.copyWith(stock: item.stock + qty) else item,
+        ],
+      );
+      return null;
+    }
+    try {
+      await repo.restock(id, qty);
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      _fail(error);
+      return _message(error);
+    }
+  }
+
+  /// Uploads a product photo and returns its public URL.
+  Future<({String? url, String? error})> uploadItemImage({
+    required Uint8List bytes,
+    required String fileName,
+    String contentType = 'image/jpeg',
+  }) async {
+    final repo = _repo;
+    if (repo == null) {
+      return (
+        url: null,
+        error: 'Photo upload is available when Supabase is connected.',
+      );
+    }
+    try {
+      final url = await repo.uploadItemImage(
+        bytes: bytes,
+        fileName: fileName,
+        contentType: contentType,
+      );
+      return (url: url, error: null);
+    } catch (error) {
+      _fail(error);
+      return (url: null, error: _message(error));
+    }
+  }
+
+  Future<String?> updateProfileName(String name) async {
+    final repo = _repo;
+    if (repo == null) {
+      return 'Name changes are available when Supabase is connected.';
+    }
+    try {
+      await repo.updateProfileName(name);
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      _fail(error);
+      return _message(error);
+    }
   }
 
   /// Credits a collection and returns the points, or null when the server
@@ -1034,7 +1131,7 @@ class AppStore extends Notifier<AppState> {
     final collection = CollectionRecord(
       id: id,
       beneficiaryId: beneficiaryId,
-      collectorName: state.profile?.name ?? 'Abdullahi A.',
+      collectorName: state.profile?.name ?? 'Staff',
       summary: parts.join(' + '),
       kg: lines
           .where((l) => l.material.unit == MaterialUnit.kg)
@@ -1100,7 +1197,7 @@ class AppStore extends Notifier<AppState> {
     final redemption = RedemptionRecord(
       id: 'red-${state.redemptions.length + 1}',
       beneficiaryId: beneficiaryId,
-      collectorName: state.profile?.name ?? 'Abdullahi A.',
+      collectorName: state.profile?.name ?? 'Staff',
       rewardName: reward.name,
       qty: qty,
       points: cost,
