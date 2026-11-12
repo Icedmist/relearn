@@ -6,6 +6,8 @@ import 'package:relearn/core/router/app_router.dart';
 
 const _routes = <String>[
   '/login',
+  '/onboarding',
+  '/account',
   '/admin/dashboard',
   '/admin/schools',
   '/admin/beneficiaries',

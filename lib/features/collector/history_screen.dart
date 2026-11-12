@@ -191,7 +191,7 @@ class CollectorHistoryScreen extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'Void request sent for admin review (simulated).',
+                    'Void requests are not available in this build. Ask an admin to adjust the balance instead.',
                   ),
                 ),
               );

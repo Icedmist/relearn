@@ -6,7 +6,10 @@
 abstract final class AppConfig {
   static const appName = 'ReLearn';
   static const tagline = 'Recycle to Learn.';
-  static const version = '0.3.0';
+  static const version = '0.4.0';
+
+  /// The app locks after this much inactivity in live mode.
+  static const sessionIdleTimeout = Duration(minutes: 15);
 
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   static const supabaseAnonKey = String.fromEnvironment(

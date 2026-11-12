@@ -234,19 +234,35 @@ class SupabaseRepository {
     String? category,
     String? description,
     String? imageUrl,
+    bool clearImage = false,
+    bool clearDescription = false,
   }) async {
-    await _client
-        .from('rewards')
-        .update({
-          'name': ?name,
-          'points_cost': ?pointsCost,
-          'stock': ?stock,
-          'active': ?active,
-          'category': ?category,
-          'description': ?description,
-          'image_url': ?imageUrl,
-        })
-        .eq('id', id);
+    final patch = <String, dynamic>{};
+    if (name != null) patch['name'] = name;
+    if (pointsCost != null) patch['points_cost'] = pointsCost;
+    if (stock != null) patch['stock'] = stock;
+    if (active != null) patch['active'] = active;
+    if (category != null) patch['category'] = category;
+    if (clearDescription) {
+      patch['description'] = null;
+    } else if (description != null) {
+      patch['description'] = description;
+    }
+    if (clearImage) {
+      patch['image_url'] = null;
+    } else if (imageUrl != null) {
+      patch['image_url'] = imageUrl;
+    }
+    if (patch.isEmpty) return;
+    await _client.from('rewards').update(patch).eq('id', id);
+  }
+
+  Future<void> deleteReward(String id) async {
+    await _client.from('rewards').delete().eq('id', id);
+  }
+
+  Future<void> updateProfileName(String name) async {
+    await _client.rpc('update_my_name', params: {'p_name': name});
   }
 
   Future<int> restock(String id, int qty) async {

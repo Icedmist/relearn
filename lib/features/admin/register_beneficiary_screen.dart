@@ -354,7 +354,7 @@ class _CsvPanel extends StatelessWidget {
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'File picking and validation land in Stage 1 (P1).',
+                          'File import is not available in this build.',
                         ),
                       ),
                     ),
@@ -370,7 +370,9 @@ class _CsvPanel extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Template download is wired in Stage 1.'),
+                        content: Text(
+                          'The CSV template is not available in this build.',
+                        ),
                       ),
                     ),
                     icon: const Icon(Icons.download_outlined, size: 18),
@@ -383,7 +385,7 @@ class _CsvPanel extends StatelessWidget {
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Import requires the Stage 1 repository.',
+                          'CSV import is not available in this build.',
                         ),
                       ),
                     ),

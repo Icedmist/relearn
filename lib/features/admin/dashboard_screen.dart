@@ -15,6 +15,18 @@ class AdminDashboardScreen extends ConsumerWidget {
     final state = ref.watch(appStoreProvider);
     final theme = Theme.of(context);
     final lowStock = state.rewards.where((r) => r.stock <= 10).toList();
+    final firstName =
+        (state.profile?.name.trim().isNotEmpty == true
+                ? state.profile!.name
+                : 'there')
+            .split(RegExp(r'\s+'))
+            .first;
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
 
     final activity =
         <
@@ -54,9 +66,8 @@ class AdminDashboardScreen extends ConsumerWidget {
       children: [
         PageHeader(
           eyebrow: 'Overview',
-          title: 'Good morning, Abdullahi',
-          subtitle:
-              '${formatDateRange(DateTime.now())} · Gombe pilot programme',
+          title: '$greeting, $firstName',
+          subtitle: '${formatDateRange(DateTime.now())} · Programme overview',
           actions: [
             OutlinedButton.icon(
               onPressed: () => context.go('/admin/reports'),

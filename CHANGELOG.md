@@ -10,6 +10,36 @@ All notable changes to ReLearn are documented here. Format follows
 - Stage 2: camera scanning, offline queue, sync status.
 - Stage 3: PDF card export and printable batches.
 
+## [0.4.0] — 2026-11-13
+
+### Added
+- Account centre for every staff member: profile name, change password,
+  fingerprint/face unlock toggle, guide replay and sign out.
+- First-run onboarding with four guide pages and a replayable "How to use"
+  flow from the login screen and Account.
+- Session lock after 15 minutes of inactivity in live mode, with fingerprint or
+  face unlock and password fallback. Web uses password unlock only.
+- Product photo upload from the phone gallery or camera into the public
+  `item-images` bucket, with preview, size validation and progress feedback.
+- Deactivate and delete actions for catalogue items.
+- `update_my_name` RPC (migration `0006`) so staff can rename themselves without
+  changing their role.
+- GitHub release workflow that builds the APK and web admin on every `v*` tag.
+
+### Changed
+- Product saves are now awaited: the form shows a spinner, reports backend
+  errors inline and reloads the catalogue after success.
+- Restock uses the atomic server RPC only, fixing a double stock increment.
+- Removed simulated and stage-placeholder copy from the collector scan, home,
+  history and admin screens. The sample-card action appears in demo mode only.
+- Dashboard greeting and admin/collector account labels now use the signed-in
+  profile instead of hardcoded names.
+
+### Security
+- Android uses `FlutterFragmentActivity`, `USE_BIOMETRIC`, `USE_FINGERPRINT`
+  (API 28 and below) and `minSdk 23` for biometric unlock.
+- Demo mode never locks and never persists security settings.
+
 ## [0.3.0] — 2026-11-12
 
 ### Added
@@ -111,7 +141,8 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Icedmist/relearn/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Icedmist/relearn/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Icedmist/relearn/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Icedmist/relearn/compare/v0.1.2...v0.2.0

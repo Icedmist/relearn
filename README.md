@@ -24,10 +24,9 @@ dashboard of schools, beneficiaries, materials, points and rewards.
 **One printed card is the whole identity.** No app, no login and no data plan for
 the pupil. The collector's Android phone does the work; Postgres keeps the truth.
 
-> **Status:** Stage 1 — full-stack Supabase. Live email/password auth, a real
-> Postgres schema with RLS, server-side points and redemption RPCs, a staff
-> directory, and an educational supplies catalogue. Camera scanning, PDF cards
-> and the offline queue remain for Stages 2–3.
+> **Status:** v0.4.0 — account centre, onboarding, biometric session lock,
+> product photo upload and GitHub releases. Camera scanning, PDF cards and the
+> offline queue remain on the roadmap.
 
 ---
 
@@ -36,7 +35,9 @@ the pupil. The collector's Android phone does the work; Postgres keeps the truth
 - [Why ReLearn](#why-relearn)
 - [Product at a glance](#product-at-a-glance)
 - [Screens](#screens)
+- [Accounts and sessions](#accounts-and-sessions)
 - [Demo walkthrough](#demo-walkthrough)
+- [Releases](#releases)
 - [Stack](#stack)
 - [Repository layout](#repository-layout)
 - [Getting started](#getting-started)
@@ -92,11 +93,18 @@ school without developer help.
 
 - Admin dashboard with KPI cards, a 7-day chart, top materials and activity feed.
 - School management, beneficiary registration, QR preview, card print preview.
-- Materials and rates, rewards and stock, reports, user management.
+- Materials and rates, item shop, reports, user management.
 - Marketplace-style item shop: searchable, category-filtered cards with photos
   or branded artwork, points, stock and an add/edit form for every field.
-- Collector home, simulated scan, search, beneficiary card, collection entry
+- Product photos from the gallery or camera upload to `item-images`, plus
+  deactivate and delete actions for admins.
+- Collector home, card lookup, search, beneficiary card, collection entry
   with a live points preview, redemption with balance and stock checks, history.
+- Account centre for every staff member: profile name, password change,
+  fingerprint unlock, guide replay and sign out.
+- First-run onboarding and a replayable "How to use" guide.
+- Session security: live sessions lock after 15 minutes idle and unlock with
+  fingerprint/face or the account password.
 - A working in-memory store: recording a collection really credits points;
   redeeming really deducts points and stock for the session.
 - Brand system: logo, palette, typography and app icons.
@@ -128,9 +136,11 @@ See the [roadmap](#roadmap) and [`docs/PRD.md`](docs/PRD.md).
 | 6 | Beneficiary profile | `/admin/beneficiaries/:id` |
 | 7 | Print cards | `/admin/print` |
 | 8 | Materials & points | `/admin/materials` |
-| 9 | Rewards & stock | `/admin/rewards` |
+| 9 | Item shop | `/admin/rewards` |
 | 10 | Reports | `/admin/reports` |
 | 11 | Users | `/admin/users` |
+| 12 | Account | `/account` |
+| 13 | Onboarding / how-to | `/onboarding` |
 
 ### Collector — Android
 
@@ -145,24 +155,51 @@ See the [roadmap](#roadmap) and [`docs/PRD.md`](docs/PRD.md).
 | 7 | Redeem | `/collector/beneficiary/:id/redeem` |
 | 8 | Success | `/collector/success` |
 | 9 | History | `/collector/history` |
+| 10 | Account | `/account` |
+| 11 | Onboarding / how-to | `/onboarding` |
 
 Full content, actions and states: [`docs/SCREENS.md`](docs/SCREENS.md).
 
 ---
 
+## Accounts and sessions
+
+Every staff member can open **Account** from the top bar (or the admin drawer).
+From there they can change their name, change their password, enable
+fingerprint/face unlock, replay the guide and sign out.
+
+- **Live mode only:** name and password changes, biometrics and session locks.
+- **Session lock:** after 15 minutes of inactivity the app locks. Unlock with an
+  enrolled fingerprint/face, or with the account password. On the web, password
+  unlock is the only option.
+- **Sign out instead:** the lock screen can sign out completely and return to
+  login.
+- **Android setup:** `local_auth` needs `FlutterFragmentActivity`, the
+  `USE_BIOMETRIC` permission and `minSdk 23`; all are configured in this repo.
+- **Demo mode:** never locks and shows a clear "changes are not saved" banner.
+
+First sign-in shows the onboarding guide once. It can be replayed any time from
+**Account → How to use ReLearn**, or from the login screen.
+
+---
+
 ## Demo walkthrough
 
-1. `flutter run -d chrome`
-2. On the login screen choose **Admin demo**.
-3. Open **Beneficiaries → Amina Yusuf** to see the QR, balance and ledger.
-4. Switch to the collector app (QR icon in the top bar, or **Collector demo**).
-5. Tap **Scan a QR card → Simulate a successful scan**.
-6. Tap **Record collection**, adjust the material quantities and confirm.
-7. See the success screen with the new balance.
-8. Redeem an **Exercise book** and watch points and stock drop.
-9. Return to the admin dashboard and see the new activity.
+1. `flutter run -d chrome` (no credentials needed; demo mode is automatic).
+2. Sign in with the prefilled demo email and password.
+3. Complete or skip the onboarding guide.
+4. Open **Beneficiaries → Amina Yusuf** to see the QR, balance and ledger.
+5. Switch to the collector app (QR icon in the top bar).
+6. Tap **Find a pupil**, then **Open a sample card** (demo only) or enter
+   `RL-0042-7K3Q` manually.
+7. Tap **Record collection**, adjust the material quantities and confirm.
+8. See the success screen with the new balance.
+9. Redeem an **Exercise book** and watch points and stock drop.
+10. Open **Account** to replay the guide, then return to the admin dashboard and
+    see the new activity.
 
-All numbers are demo-only and reset when the app restarts.
+The sample-card button only appears in demo mode. All demo numbers reset when
+the app restarts.
 
 ---
 
@@ -196,10 +233,12 @@ relearn/
 │   └── seed.sql             starting catalogue and demo school
 ├── assets/brand/            logo SVGs + PNG app icon
 ├── lib/
-│   ├── core/                config, router, theme, shared widgets
-│   ├── data/                models, demo store
+│   ├── core/                config, router, auth, prefs, theme, widgets
+│   ├── data/                models, app store, Supabase repository
 │   └── features/
+│       ├── account/
 │       ├── auth/
+│       ├── onboarding/
 │       ├── admin/
 │       └── collector/
 ├── test/
@@ -244,6 +283,10 @@ flutter run -d chrome --dart-define-from-file=.env
 Live mode turns on automatically when credentials are present. Set
 `DEMO_MODE=true` in `.env` to force the in-memory store.
 
+Accounts created from **Admin → Users** can sign in immediately. Staff can
+rename themselves through the `update_my_name` RPC (migration `0006`), which
+updates only the name column and cannot change their role.
+
 **Demo vs live data:** demo mode runs entirely on seeded, in-memory data — no
 network, no persistence, and changes disappear on restart. Live mode reads and
 writes the Supabase project, so schools, items, points and redemptions are real
@@ -279,6 +322,8 @@ Migrations:
 | `0002_staff_directory.sql` | Staff directory view, hardened signup, atomic restock |
 | `0003_educational_catalogue.sql` | School supplies catalogue and point costs |
 | `0004_item_images.sql` | Public `item-images` bucket, admin-only writes, `image_url` columns |
+| `0005_reward_details.sql` | Item category and description for marketplace cards |
+| `0006_update_my_name.sql` | Staff can rename themselves via a safe RPC |
 
 3. Create the first admin user in **Authentication → Users**, then promote the
    profile. Every self-signup starts as a collector; admins are explicit:
@@ -302,9 +347,10 @@ app or repository. See [`.env.example`](.env.example).
 
 `0004_item_images.sql` creates a public-read `item-images` bucket (5 MB limit;
 PNG, JPEG, WebP). Only active admins can upload, replace or delete files, which
-RLS checks through `public.is_admin()`. Upload from **Storage → item-images** or
-through `SupabaseRepository.uploadItemImage`, then save the returned public URL
-to `materials.image_url` or `rewards.image_url`.
+RLS checks through `public.is_admin()`. Admins can upload directly from the
+**Add item** / **Edit item** form with the phone gallery or camera; the app sends
+the file to `item-images` and saves the returned public URL. You can also upload
+from **Storage → item-images** and paste the URL into the form.
 
 ### Build and deploy
 
@@ -318,6 +364,20 @@ flutter build appbundle --release --dart-define-from-file=.env
 
 Vercel: build command `flutter build web`, output `build/web`, add a rewrite to
 `index.html` for client-side routes.
+
+Tagged releases build both artefacts automatically. See [Releases](#releases).
+
+---
+
+## Releases
+
+Every `v*` tag runs [`release.yml`](.github/workflows/release.yml), which builds
+the signed APK and a zipped web admin, then publishes both to GitHub Releases.
+
+- Latest release: <https://github.com/Icedmist/relearn/releases/latest>
+- Assets: `app-release.apk` and `relearn-web.zip`
+- Build variables: repository variables `SUPABASE_URL` and
+  `SUPABASE_PUBLISHABLE_KEY` (never the secret/service-role key)
 
 ---
 

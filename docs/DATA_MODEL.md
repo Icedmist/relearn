@@ -225,6 +225,9 @@ reversing ledger entry, so the ledger sum always matches the displayed balance.
   `item-images` Storage bucket, admin-only writes and `image_url` columns.
 - [`../supabase/migrations/0005_reward_details.sql`](../supabase/migrations/0005_reward_details.sql) —
   category and description for marketplace cards.
+- [`../supabase/migrations/0006_update_my_name.sql`](../supabase/migrations/0006_update_my_name.sql) —
+  `update_my_name` security-definer RPC so staff can rename themselves without
+  being able to change their own role or active flag.
 - [`../supabase/seed.sql`](../supabase/seed.sql) — starting materials, rewards and
   a demo school.
 

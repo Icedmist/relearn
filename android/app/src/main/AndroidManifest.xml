@@ -2,6 +2,11 @@
     <!-- ReLearn talks to Supabase over HTTPS in release builds too. Flutter only
          adds INTERNET to the debug/profile manifests by default. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Fingerprint / face unlock for the session lock. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission
+        android:name="android.permission.USE_FINGERPRINT"
+        android:maxSdkVersion="28"/>
     <application
         android:label="ReLearn"
         android:name="${applicationName}"
