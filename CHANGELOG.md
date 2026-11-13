@@ -10,6 +10,28 @@ All notable changes to ReLearn are documented here. Format follows
 - Stage 2: camera scanning, offline queue, sync status.
 - Stage 3: PDF card export and printable batches.
 
+## [0.4.1] — 2026-11-13
+
+### Fixed
+- Card printing now generates a real A4 PDF (eight cards per sheet) and opens
+  the system print/save dialog. Single cards can be printed from a beneficiary
+  profile. The previous stub only showed an “not available” message.
+- Finishing the onboarding guide from the login screen no longer sends the app
+  to `/admin/dashboard`. The guide is public and returns to login; the role is
+  resolved only after authentication.
+- A restored Supabase session is now validated before navigation. If the staff
+  profile is missing, inactive or the data load fails, ReLearn signs out and
+  returns to login instead of opening an empty admin screen with errors.
+- Admin routes check the signed-in role; collectors are sent to the collector
+  home instead of rendering admin screens.
+
+### Changed
+- Removed the non-functional CSV import toggle and report export button so the
+  UI only offers features that work.
+- Replaced hardcoded dashboard deltas with accurate labels.
+- README and screen documentation now describe the shipped behaviour, including
+  the features that are still on the roadmap.
+
 ## [0.4.0] — 2026-11-13
 
 ### Added
@@ -141,7 +163,8 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/Icedmist/relearn/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Icedmist/relearn/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Icedmist/relearn/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/Icedmist/relearn/compare/v0.2.0...v0.2.1

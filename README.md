@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/Icedmist/relearn/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Icedmist/relearn/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-stage%201%20full--stack-2E9E5B"></a>
+  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-v0.4.1-2E9E5B"></a>
   <a href="#stack"><img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B"></a>
   <a href="#stack"><img alt="Supabase" src="https://img.shields.io/badge/Backend-Supabase-3ECF8E"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -15,35 +15,47 @@
 
 ---
 
-ReLearn turns recyclable waste into school supplies. Pupils and teachers bring
-paper, bottles, cans and sachets to school. A field collector scans their printed
-QR card, the server credits points at the configured rates, and the points are
-redeemed on the spot for pencils and exercise books. Programme staff get a live
-dashboard of schools, beneficiaries, materials, points and rewards.
+ReLearn is a school recycling rewards system. Pupils and teachers bring paper,
+bottles, cans and sachets to school. A staff member records what they brought
+against the pupil's printed card, the server credits points at the configured
+rates, and the pupil spends those points on pencils, exercise books, bags and
+other school supplies.
 
-**One printed card is the whole identity.** No app, no login and no data plan for
-the pupil. The collector's Android phone does the work; Postgres keeps the truth.
+**A pupil needs one printed card, not a phone or an account.** The card carries
+a public ID and a QR code. Staff look the card up by ID (camera scanning is on
+the roadmap) and all points and personal data stay in the database.
 
-> **Status:** v0.4.0 — account centre, onboarding, biometric session lock,
-> product photo upload and GitHub releases. Camera scanning, PDF cards and the
-> offline queue remain on the roadmap.
+ReLearn ships as one Flutter codebase with two experiences:
+
+- **Admin web app** — schools, beneficiaries, card printing, materials and
+  rates, item shop, reports, staff accounts.
+- **Android collector app** — open a pupil card, record a collection, redeem an
+  item, review today's history.
+
+> <a id="status"></a>**Status: v0.4.1.** Live Supabase authentication,
+> PostgreSQL, Row Level Security, server-side points and redemption, card PDF
+> printing, product photo upload and biometric session lock are working.
+> Camera scanning, CSV import/export and offline sync are **not** implemented
+> yet; the screens say so instead of pretending.
 
 ---
 
 ## Table of contents
 
-- [Why ReLearn](#why-relearn)
-- [Product at a glance](#product-at-a-glance)
+- [How it works](#how-it-works)
+- [What works today](#what-works-today)
+- [Not implemented yet](#not-implemented-yet)
 - [Screens](#screens)
 - [Accounts and sessions](#accounts-and-sessions)
+- [Card printing](#card-printing)
 - [Demo walkthrough](#demo-walkthrough)
-- [Releases](#releases)
 - [Stack](#stack)
 - [Repository layout](#repository-layout)
 - [Getting started](#getting-started)
 - [Supabase setup](#supabase-setup)
-- [Architecture and rules](#architecture-and-rules)
+- [Architecture and data flow](#architecture-and-data-flow)
 - [Data model](#data-model)
+- [Build and release](#build-and-release)
 - [Documentation](#documentation)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -51,74 +63,92 @@ the pupil. The collector's Android phone does the work; Postgres keeps the truth
 
 ---
 
-## Why ReLearn
+## How it works
 
-Schools generate recyclable waste every day, but there is no simple, trustworthy
-way to convert it into learning materials for the children who collect it.
-Existing recycling schemes pay cash or require smartphones and accounts that
-pupils do not have.
+1. **Register the school** in the admin app.
+2. **Register a pupil or teacher.** ReLearn generates a public ID such as
+   `RL-0042-7K3Q` and a QR code that contains only that ID.
+3. **Print the card.** Export an A4 sheet of eight cards as a PDF and print it
+   on a local printer.
+4. **Collect recyclables.** In the collector app, enter the ID printed under
+   the QR, choose the materials and quantities, and confirm. The server
+   recalculates the points and writes an append-only ledger entry.
+5. **Redeem.** Open the same card, choose an item from the shop, and confirm.
+   The server checks the balance and stock inside one transaction, then deducts
+   points and stock.
+6. **Review.** The dashboard and reports show collections, redemptions and the
+   full points ledger.
 
-ReLearn's insight is that a **printed QR card is the cheapest reliable identity a
-child can carry**: no app, no login, no data plan, no cost per scan. The QR holds
-only a public ID. Points and personal data stay in the database, protected by
-Row Level Security.
-
-### Product principles
-
-1. **Card, not account.** Beneficiaries never log in.
-2. **Server is the source of truth.** Points are computed server-side; the app
-   only previews.
-3. **Never lose a point.** Append-only ledger, idempotency keys, no deletes.
-4. **Works on a cheap phone, on a bad network.** Offline queue with sync status.
-5. **Low cost by design.** No paid QR service, no SMS, no per-scan fees.
-6. **Safeguard children's data.** Collect the minimum; guardian phone is optional.
+Each collection line stores the rate that was active when it was recorded, so
+changing a rate never rewrites history.
 
 ---
 
-## Product at a glance
+## What works today
 
-| | Admin (Flutter Web) | Collector (Android) | Beneficiary |
-|---|---|---|---|
-| Who | Programme staff | Field agents | Pupils and teachers |
-| Access | Full programme | Scan, collect, redeem | Printed QR card only |
-| Device | Browser | Low-to-mid-range Android | None |
+### Admin — Flutter Web
 
-**Core loop:** register school → register beneficiary → generate ID + QR → print
-card → scan card → record materials → points credited → redeem reward → dashboard.
+- **Dashboard** — active beneficiaries, kilograms collected, points awarded,
+  points redeemed, rewards distributed, a 7-day collections chart, top
+  materials and recent activity.
+- **Schools** — add a school, rename it, activate or deactivate it.
+- **Beneficiaries** — search and filter, register one pupil or teacher, open a
+  profile with balance, QR, ledger and collections, block or unblock a card,
+  post a manual points adjustment.
+- **Card printing** — filter by school and class, select cards, and generate an
+  eight-per-A4-page PDF through the system print/save dialog.
+- **Materials & points** — add a material, edit its rate, allow or disallow it,
+  and activate or deactivate it. New rates affect new collections only.
+- **Item shop** — search and filter by category; add or edit name, category,
+  description, points cost, stock and visibility; upload a photo from the
+  gallery or camera; restock; deactivate; delete.
+- **Reports** — collections, redemptions and the points ledger, filtered by
+  school, with row and points totals.
+- **Users** — create staff accounts, set the role, activate or deactivate a
+  staff member, and send a password-reset email.
+- **Account centre** — edit your name, change your password, enable
+  fingerprint/face unlock, replay the guide and sign out.
 
-**Success test:** the full loop can be demonstrated end to end and run in a real
-school without developer help.
+### Collector — Android
 
-### What works in this scaffold
+- **Home** — today's totals, current materials and quick actions.
+- **Find a pupil** — enter the public ID printed under the QR code.
+- **Search** — look up a beneficiary by name, ID, school or class.
+- **Beneficiary card** — balance, recent ledger, collection and redemption
+  actions.
+- **Record collection** — choose materials, enter kilograms or piece counts,
+  see a live points preview, and save through the server RPC.
+- **Redeem** — browse in-stock items, check the balance, and confirm a
+  redemption.
+- **History** — today's collections and redemptions for the signed-in
+  collector.
+- **Account centre** — the same profile, security and guide tools as admin.
 
-- Admin dashboard with KPI cards, a 7-day chart, top materials and activity feed.
-- School management, beneficiary registration, QR preview, card print preview.
-- Materials and rates, item shop, reports, user management.
-- Marketplace-style item shop: searchable, category-filtered cards with photos
-  or branded artwork, points, stock and an add/edit form for every field.
-- Product photos from the gallery or camera upload to `item-images`, plus
-  deactivate and delete actions for admins.
-- Collector home, card lookup, search, beneficiary card, collection entry
-  with a live points preview, redemption with balance and stock checks, history.
-- Account centre for every staff member: profile name, password change,
-  fingerprint unlock, guide replay and sign out.
-- First-run onboarding and a replayable "How to use" guide.
-- Session security: live sessions lock after 15 minutes idle and unlock with
-  fingerprint/face or the account password.
-- A working in-memory store: recording a collection really credits points;
-  redeeming really deducts points and stock for the session.
-- Brand system: logo, palette, typography and app icons.
-- Complete Supabase schema with RLS, atomic RPCs and an append-only ledger.
-- Live Supabase auth and persistence, with admin-created staff accounts and a
-  server-enforced staff directory.
+### Shared
 
-### Not built yet (by design)
+- Email/password authentication through Supabase.
+- Live mode reads and writes the hosted Supabase project; demo mode runs on an
+  in-memory seed with no network and no persistence.
+- Row Level Security on every table, with server-side points and redemption
+  functions.
+- First-run onboarding and a replayable “How to use ReLearn” guide.
+- Live sessions lock after 15 minutes of inactivity. Unlock with fingerprint or
+  face on Android, or the account password everywhere.
 
-- Camera scanning (`mobile_scanner`), PDF export (`pdf`/`printing`), CSV import.
-- Drift offline queue and sync worker.
-- Live dashboard queries and CSV reports.
+---
 
-See the [roadmap](#roadmap) and [`docs/PRD.md`](docs/PRD.md).
+## Not implemented yet
+
+These are shown honestly in the UI, usually with a disabled control or a short
+explanation:
+
+- **Camera QR scanning.** Collectors enter the ID manually today.
+- **CSV beneficiary import.** The registration screen offers single entry only.
+- **CSV report export.** Reports are on screen; export is planned.
+- **Offline queue and sync.** The app requires a connection for live data.
+- **Automatic card printing.** PDF export opens the system print dialog; you
+  choose the printer.
+- **Beneficiary self-service.** There is no pupil login or balance lookup.
 
 ---
 
@@ -129,34 +159,34 @@ See the [roadmap](#roadmap) and [`docs/PRD.md`](docs/PRD.md).
 | # | Screen | Route |
 |---|---|---|
 | 1 | Login | `/login` |
-| 2 | Dashboard | `/admin/dashboard` |
-| 3 | Schools | `/admin/schools` |
-| 4 | Beneficiaries | `/admin/beneficiaries` |
-| 5 | Register beneficiary (single + CSV) | `/admin/beneficiaries/new` |
-| 6 | Beneficiary profile | `/admin/beneficiaries/:id` |
-| 7 | Print cards | `/admin/print` |
-| 8 | Materials & points | `/admin/materials` |
-| 9 | Item shop | `/admin/rewards` |
-| 10 | Reports | `/admin/reports` |
-| 11 | Users | `/admin/users` |
-| 12 | Account | `/account` |
-| 13 | Onboarding / how-to | `/onboarding` |
+| 2 | Onboarding / how-to | `/onboarding` |
+| 3 | Dashboard | `/admin/dashboard` |
+| 4 | Schools | `/admin/schools` |
+| 5 | Beneficiaries | `/admin/beneficiaries` |
+| 6 | Register beneficiary | `/admin/beneficiaries/new` |
+| 7 | Beneficiary profile | `/admin/beneficiaries/:id` |
+| 8 | Print cards | `/admin/print` |
+| 9 | Materials & points | `/admin/materials` |
+| 10 | Item shop | `/admin/rewards` |
+| 11 | Reports | `/admin/reports` |
+| 12 | Users | `/admin/users` |
+| 13 | Account | `/account` |
 
 ### Collector — Android
 
 | # | Screen | Route |
 |---|---|---|
 | 1 | Login | `/login` |
-| 2 | Home | `/collector/home` |
-| 3 | Scan | `/collector/scan` |
-| 4 | Search | `/collector/search` |
-| 5 | Beneficiary card | `/collector/beneficiary/:id` |
-| 6 | Record collection | `/collector/beneficiary/:id/collect` |
-| 7 | Redeem | `/collector/beneficiary/:id/redeem` |
-| 8 | Success | `/collector/success` |
-| 9 | History | `/collector/history` |
-| 10 | Account | `/account` |
-| 11 | Onboarding / how-to | `/onboarding` |
+| 2 | Onboarding / how-to | `/onboarding` |
+| 3 | Home | `/collector/home` |
+| 4 | Find a pupil | `/collector/scan` |
+| 5 | Search | `/collector/search` |
+| 6 | Beneficiary card | `/collector/beneficiary/:id` |
+| 7 | Record collection | `/collector/beneficiary/:id/collect` |
+| 8 | Redeem | `/collector/beneficiary/:id/redeem` |
+| 9 | Success | `/collector/success` |
+| 10 | History | `/collector/history` |
+| 11 | Account | `/account` |
 
 Full content, actions and states: [`docs/SCREENS.md`](docs/SCREENS.md).
 
@@ -164,42 +194,64 @@ Full content, actions and states: [`docs/SCREENS.md`](docs/SCREENS.md).
 
 ## Accounts and sessions
 
-Every staff member can open **Account** from the top bar (or the admin drawer).
-From there they can change their name, change their password, enable
-fingerprint/face unlock, replay the guide and sign out.
+Every staff member can open **Account** from the top bar or the admin drawer.
 
-- **Live mode only:** name and password changes, biometrics and session locks.
-- **Session lock:** after 15 minutes of inactivity the app locks. Unlock with an
-  enrolled fingerprint/face, or with the account password. On the web, password
-  unlock is the only option.
-- **Sign out instead:** the lock screen can sign out completely and return to
-  login.
-- **Android setup:** `local_auth` needs `FlutterFragmentActivity`, the
-  `USE_BIOMETRIC` permission and `minSdk 23`; all are configured in this repo.
-- **Demo mode:** never locks and shows a clear "changes are not saved" banner.
+- **Name** — staff rename themselves through the `update_my_name` RPC
+  (migration `0006`). The RPC can change only the name, never the role.
+- **Password** — changed through Supabase Auth. There is also a password-reset
+  email flow on the login screen and in **Admin → Users**.
+- **Fingerprint / face** — available on Android when the device has an enrolled
+  biometric. Web falls back to the account password.
+- **Session lock** — live sessions lock after 15 minutes of inactivity. The
+  lock screen can unlock with biometrics or the password, or sign out.
+- **Demo mode** — never locks, never persists security settings, and shows a
+  “changes are not saved” banner.
+- **First sign-in** — shows the onboarding guide once. Replay it from
+  **Account → How to use ReLearn** or from the login screen.
+- **Stale sessions** — if a saved session cannot load its staff profile, the app
+  signs out and returns to login instead of opening an empty admin screen.
 
-First sign-in shows the onboarding guide once. It can be replayed any time from
-**Account → How to use ReLearn**, or from the login screen.
+Android biometric support needs `FlutterFragmentActivity`, the
+`USE_BIOMETRIC` permission, the legacy `USE_FINGERPRINT` permission and
+`minSdk 23`. All are configured in this repository.
+
+---
+
+## Card printing
+
+1. Open **Admin → Print cards**.
+2. Choose a school and, optionally, a class.
+3. Select individual cards, or leave the selection empty to use every filtered
+   card.
+4. Tap **Export PDF**. ReLearn builds the PDF locally and opens the system
+   print dialog; choose a printer or “Save as PDF”.
+
+The sheet holds eight cards on A4. Every card includes the pupil name, type,
+class, school and public ID, plus a QR code that contains only the public ID.
+The QR is printed at 25 mm so it stays readable on cheap printers.
+
+You can also print one card from a beneficiary profile with **Print card**.
 
 ---
 
 ## Demo walkthrough
 
-1. `flutter run -d chrome` (no credentials needed; demo mode is automatic).
+1. `flutter run -d chrome` — no credentials are needed, so demo mode starts
+   automatically.
 2. Sign in with the prefilled demo email and password.
 3. Complete or skip the onboarding guide.
 4. Open **Beneficiaries → Amina Yusuf** to see the QR, balance and ledger.
-5. Switch to the collector app (QR icon in the top bar).
-6. Tap **Find a pupil**, then **Open a sample card** (demo only) or enter
-   `RL-0042-7K3Q` manually.
+5. Switch to the collector app with the QR icon in the top bar.
+6. Tap **Find a pupil** and enter `RL-0042-7K3Q`, or use the demo sample-card
+   action.
 7. Tap **Record collection**, adjust the material quantities and confirm.
 8. See the success screen with the new balance.
 9. Redeem an **Exercise book** and watch points and stock drop.
-10. Open **Account** to replay the guide, then return to the admin dashboard and
-    see the new activity.
+10. Open **Account** to replay the guide, then return to the dashboard and see
+    the new activity.
 
-The sample-card button only appears in demo mode. All demo numbers reset when
-the app restarts.
+Demo numbers reset when the app restarts. The sample-card action appears only
+in demo mode.
 
 ---
 
@@ -210,16 +262,16 @@ the app restarts.
 | UI | Flutter 3.x (Android + Web, one codebase) |
 | State | Riverpod |
 | Routing | go_router |
-| Local storage / offline | Drift (SQLite) + sync queue — Stage 2 |
-| Backend | Supabase (Postgres, Auth, RLS, RPC) |
-| QR scan | mobile_scanner — Stage 2 |
-| QR generate | qr_flutter |
-| PDF cards | pdf + printing — Stage 1 |
-| Charts | Custom Flutter bars in Stage 0; fl_chart in Stage 4 |
-| Hosting | Vercel (web) + Play internal track (Android) |
-| Fallback backend | Fastify + Drizzle + Postgres on DigitalOcean |
+| Backend | Supabase (Postgres, Auth, Storage, RLS, RPC) |
+| QR generation | `qr_flutter` in the UI, `pdf`/`barcode` in card PDFs |
+| Card PDF | `pdf` + `printing` |
+| Product photos | `image_picker` + Supabase Storage |
+| Session security | `local_auth` + `shared_preferences` |
+| Charts | Custom Flutter bars |
+| Local offline store | Not implemented (roadmap) |
+| Hosting | GitHub Releases for the APK and web zip; deploy the web build anywhere static |
 
-Rationale: [`docs/STACK.md`](docs/STACK.md).
+Rationale and trade-offs: [`docs/STACK.md`](docs/STACK.md).
 
 ---
 
@@ -233,7 +285,7 @@ relearn/
 │   └── seed.sql             starting catalogue and demo school
 ├── assets/brand/            logo SVGs + PNG app icon
 ├── lib/
-│   ├── core/                config, router, auth, prefs, theme, widgets
+│   ├── core/                config, router, auth, services, theme, widgets
 │   ├── data/                models, app store, Supabase repository
 │   └── features/
 │       ├── account/
@@ -268,7 +320,8 @@ flutter run -d chrome        # admin + collector in the browser
 flutter run -d <android-id>  # collector app
 ```
 
-No credentials are needed: the app falls back to demo mode.
+Without Supabase credentials the app runs entirely in memory. Nothing is sent
+to a server and changes disappear on restart.
 
 ### Run against Supabase
 
@@ -280,25 +333,20 @@ cp .env.example .env
 flutter run -d chrome --dart-define-from-file=.env
 ```
 
-Live mode turns on automatically when credentials are present. Set
+Live mode turns on automatically when both values are present. Set
 `DEMO_MODE=true` in `.env` to force the in-memory store.
 
-Accounts created from **Admin → Users** can sign in immediately. Staff can
-rename themselves through the `update_my_name` RPC (migration `0006`), which
-updates only the name column and cannot change their role.
-
-**Demo vs live data:** demo mode runs entirely on seeded, in-memory data — no
-network, no persistence, and changes disappear on restart. Live mode reads and
-writes the Supabase project, so schools, items, points and redemptions are real
-and shared between devices. The hosted project currently contains seeded demo
-schools and items; replace them with real programme data before a pilot.
+Accounts created from **Admin → Users** can sign in immediately. The hosted
+project currently contains seeded demo schools and catalogue items; replace
+them with real programme data before a pilot.
 
 ### Checks
 
 ```bash
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
-flutter build web --debug
+flutter build web --release
 ```
 
 ---
@@ -347,58 +395,32 @@ app or repository. See [`.env.example`](.env.example).
 
 `0004_item_images.sql` creates a public-read `item-images` bucket (5 MB limit;
 PNG, JPEG, WebP). Only active admins can upload, replace or delete files, which
-RLS checks through `public.is_admin()`. Admins can upload directly from the
-**Add item** / **Edit item** form with the phone gallery or camera; the app sends
-the file to `item-images` and saves the returned public URL. You can also upload
-from **Storage → item-images** and paste the URL into the form.
-
-### Build and deploy
-
-```bash
-# Web admin
-flutter build web --release --dart-define-from-file=.env
-
-# Android
-flutter build appbundle --release --dart-define-from-file=.env
-```
-
-Vercel: build command `flutter build web`, output `build/web`, add a rewrite to
-`index.html` for client-side routes.
-
-Tagged releases build both artefacts automatically. See [Releases](#releases).
+RLS checks through `public.is_admin()`. Admins can upload from the **Add item**
+or **Edit item** form with the gallery or camera; the app sends the file to
+`item-images` and saves the returned public URL. You can also upload from
+**Storage → item-images** and paste the URL into the form.
 
 ---
 
-## Releases
-
-Every `v*` tag runs [`release.yml`](.github/workflows/release.yml), which builds
-the signed APK and a zipped web admin, then publishes both to GitHub Releases.
-
-- Latest release: <https://github.com/Icedmist/relearn/releases/latest>
-- Assets: `app-release.apk` and `relearn-web.zip`
-- Build variables: repository variables `SUPABASE_URL` and
-  `SUPABASE_PUBLISHABLE_KEY` (never the secret/service-role key)
-
----
-
-## Architecture and rules
+## Architecture and data flow
 
 ```
-Screens → Riverpod → repositories ──► Supabase (online)
-                              └─────► Drift + sync queue (offline)
+Screens ──► Riverpod AppStore ──► SupabaseRepository ──► Supabase
+   │              │
+   └── local UI   └── in-memory demo seed (demo mode only)
 ```
 
-Rules the implementation must keep:
-
-1. Screens never call Supabase directly.
-2. Points are never calculated in the UI for storage. The client preview is a
-   pure function; the server recalculates.
-3. Every write has a client-generated idempotency key.
-4. `points_ledger` is append-only; corrections are `void`/`adjust` entries.
-5. Redemption checks balance **and** stock inside one transaction.
-6. Rates are snapshotted on each collection line.
-7. Disallowed materials are rejected by the server, not just hidden.
-8. RLS enforces roles; route guards are UX only.
+- Screens watch a single `AppStore` snapshot. Feature screens do not query
+  Postgres directly; they call store methods. Authentication and account
+  screens use Supabase Auth directly because they manage the session itself.
+- The client never writes a points total. Collection and redemption screens
+  call `record_collection` and `redeem_reward`, which recalculate and write the
+  ledger inside one transaction.
+- `points_ledger` is append-only. Corrections are new `adjust` or `void`
+  entries.
+- Collection lines snapshot the rate, so later rate edits do not change
+  history.
+- RLS is the security boundary. Route guards and disabled buttons are only UX.
 
 ---
 
@@ -418,7 +440,7 @@ beneficiaries 1──* points_ledger            balance = Σ ledger.points
 | `beneficiaries` | Pupils and teachers with a public ID |
 | `materials` | Accepted materials, units and rates |
 | `collections` / `collection_items` | Collection header and rate-snapshotted lines |
-| `rewards` / `redemptions` | Educational supplies catalogue, stock and redemptions |
+| `rewards` / `redemptions` | School supplies catalogue, stock and redemptions |
 | `points_ledger` | Append-only earn / redeem / adjust / void entries |
 | `beneficiary_balances` | Derived balance view |
 
@@ -430,32 +452,58 @@ Full detail: [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) and
 
 ---
 
+## Build and release
+
+```bash
+# Web admin
+flutter build web --release --dart-define-from-file=.env
+
+# Android APK
+flutter build apk --release --dart-define-from-file=.env
+```
+
+Deploy `build/web` to any static host and add an SPA rewrite to `index.html`
+for client-side routes. Vercel: build command `flutter build web`, output
+directory `build/web`.
+
+Every `v*` tag runs [`release.yml`](.github/workflows/release.yml), which
+builds the APK and a zipped web admin and publishes both to GitHub Releases.
+
+- Latest release: <https://github.com/Icedmist/relearn/releases/latest>
+- Assets: `app-release.apk` and `relearn-web.zip`
+- Build variables: repository variables `SUPABASE_URL` and
+  `SUPABASE_PUBLISHABLE_KEY` (never the secret/service-role key)
+- The published APK is currently **debug-signed**; configure a production
+  keystore before Play Store distribution.
+
+---
+
 ## Documentation
 
 | Document | What it covers |
 |---|---|
 | [`docs/PRD.md`](docs/PRD.md) | Problem, goals, users, requirements, acceptance criteria, risks |
 | [`docs/SCREENS.md`](docs/SCREENS.md) | Every screen, route, action and UI state |
-| [`docs/STACK.md`](docs/STACK.md) | Stack decisions, architecture, offline sync, deployment, costs |
+| [`docs/STACK.md`](docs/STACK.md) | Stack decisions, architecture, deployment, costs |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Name, logo concept, palette, typography, UI tokens |
 | [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | Schema, relationships, ID format, integrity rules |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Issue → branch → PR → squash merge agent workflow |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Issue → branch → PR → squash merge workflow |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release history |
 
 ---
 
 ## Roadmap
 
-| Stage | Scope | Review point |
+| Stage | Scope | State |
 |---|---|---|
-| **0 · Scaffold** ✅ | Design system, routes, demo store, all screens, schema, docs | Click through the full demo |
-| **1 · Registration** | Supabase auth, schools, beneficiaries, IDs, QR, printable PDF cards | Print and scan a sample card |
-| **2 · Collection** | Collector login, camera scan, search, entry, history, offline queue | Record a collection on a real phone |
-| **3 · Points & rewards** | Server points engine, balances, catalogue, atomic redemption | Redeem an exercise book end to end |
-| **4 · Reporting** | Live dashboard, filters, CSV reports | Full demo in a school |
+| **0 · Scaffold** | Design system, routes, demo store, schema, docs | ✅ Done |
+| **1 · Registration and cards** | Auth, schools, beneficiaries, IDs, QR, printable card PDFs | ✅ Done |
+| **2 · Collection** | Collector sign-in, manual lookup, entry, history | ✅ Done |
+| **3 · Points and rewards** | Server points engine, balances, catalogue, atomic redemption | ✅ Done |
+| **4 · Field hardening** | Camera scanning, CSV import/export, offline queue, production keystore | Next |
 
-Post-MVP: beneficiary balance lookup, leaderboards, SMS/WhatsApp, iOS,
-multi-language, recycler buyer integration, impact reporting.
+Post-MVP ideas: pupil balance lookup, leaderboards, SMS/WhatsApp notifications,
+iOS, multi-language, recycler buyer integration and impact reporting.
 
 ---
 
@@ -467,7 +515,7 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md). The short version:
 2. Branch from `main`: `feat/…`, `fix/…`, `docs/…`, `chore/…`.
 3. Commit with Conventional Commits.
 4. Open a PR that links the issue (`Closes #12`).
-5. Wait for CI (`analyze`, `test`, `build web`).
+5. Wait for CI (`format`, `analyze`, `test`, `build web`).
 6. **Squash merge** and delete the branch.
 
 ---

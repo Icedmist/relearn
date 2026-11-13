@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/services/card_pdf.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/app_store.dart';
@@ -47,13 +49,8 @@ class BeneficiaryProfileScreen extends ConsumerWidget {
               '${beneficiary.type.label} · ${beneficiary.className} · ${school?.name ?? 'Unknown school'}',
           actions: [
             OutlinedButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Card PDF export is not available in this build.',
-                  ),
-                ),
-              ),
+              onPressed: () =>
+                  _printCard(context, beneficiary, school?.name ?? 'ReLearn'),
               icon: const Icon(Icons.print_outlined, size: 18),
               label: const Text('Print card'),
             ),
@@ -481,6 +478,28 @@ class _LedgerRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+Future<void> _printCard(
+  BuildContext context,
+  Beneficiary beneficiary,
+  String schoolName,
+) async {
+  try {
+    final bytes = await CardPdf.build(
+      beneficiaries: [beneficiary],
+      schoolName: schoolName,
+    );
+    await Printing.layoutPdf(
+      name: 'ReLearn card - ${beneficiary.publicId}',
+      onLayout: (_) async => bytes,
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Could not generate the card PDF: $error')),
     );
   }
 }

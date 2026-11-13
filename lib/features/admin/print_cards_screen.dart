@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/services/card_pdf.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../data/app_store.dart';
@@ -19,6 +21,42 @@ class _PrintCardsScreenState extends ConsumerState<PrintCardsScreen> {
   String? _schoolId;
   String _className = 'all';
   final Set<String> _selected = {};
+  bool _exporting = false;
+
+  Future<void> _exportPdf({
+    required List<Beneficiary> filtered,
+    required String schoolName,
+  }) async {
+    final cards = _selected.isEmpty
+        ? filtered
+        : filtered.where((b) => _selected.contains(b.id)).toList();
+    if (cards.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one card to export.')),
+      );
+      return;
+    }
+
+    setState(() => _exporting = true);
+    try {
+      final bytes = await CardPdf.build(
+        beneficiaries: cards,
+        schoolName: schoolName,
+      );
+      if (!mounted) return;
+      await Printing.layoutPdf(
+        name: 'ReLearn cards - $schoolName',
+        onLayout: (_) async => bytes,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not generate the card PDF: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,18 +110,23 @@ class _PrintCardsScreenState extends ConsumerState<PrintCardsScreen> {
               ),
             ),
             FilledButton.icon(
-              onPressed: filtered.isEmpty
+              onPressed: filtered.isEmpty || _exporting
                   ? null
-                  : () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'PDF export for ${_selected.isEmpty ? filtered.length : _selected.length} '
-                          'card(s). PDF export is not available in this build.',
-                        ),
-                      ),
+                  : () => _exportPdf(
+                      filtered: filtered,
+                      schoolName: school?.name ?? 'ReLearn',
                     ),
-              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-              label: const Text('Export PDF'),
+              icon: _exporting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.picture_as_pdf_outlined, size: 18),
+              label: Text(_exporting ? 'Generating…' : 'Export PDF'),
             ),
           ],
         ),
