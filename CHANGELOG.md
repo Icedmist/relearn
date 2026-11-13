@@ -10,6 +10,47 @@ All notable changes to ReLearn are documented here. Format follows
 - Stage 2: camera scanning, offline queue, sync status.
 - Stage 3: PDF card export and printable batches.
 
+## [0.4.2] — 2026-11-13
+
+### Fixed
+- Beneficiary registration no longer fails with
+  `function gen_random_bytes(integer) does not exist`. `next_public_id()` now
+  derives its random suffix from the core `gen_random_uuid()`, which is
+  available on every Supabase Postgres project.
+- Camera QR scanning works on Android. The scanner reads the public ID from the
+  card QR, opens the matching beneficiary immediately, and includes torch,
+  camera switching and manual ID fallback.
+- Signed-in users can no longer be routed into the wrong role area: admins,
+  teachers and collectors each land on their own home, and stale sessions are
+  rejected before navigation.
+
+### Added
+- **Teacher role.** Teachers are read-only, belong to one school and get a
+  dedicated school overview. Database RPCs reject writes from teacher accounts.
+- **School membership.** Every teacher and collector must belong to an active
+  school. Admins choose the school when creating the account; a school-less
+  account is sent to `/school-setup` after sign-in and links itself once through
+  `update_my_school`.
+- **School-scoped RLS.** Beneficiaries, collections, collection items,
+  redemptions and the points ledger are limited to the caller's school for
+  teachers and collectors. Admins keep global access.
+- **Briefs & history.** Admins can generate a global or single-school brief;
+  teachers and collectors get their own school. The brief is copy-ready and
+  covers a week, month or all time, alongside the matching transaction history.
+- Navigation entry points for briefs in the admin rail, collector app bar,
+  account centre and reports.
+
+### Changed
+- Migration `0007_school_membership.sql` adds the teacher role, school
+  membership, portable ID generation, school-scoped policies and read-only
+  teacher guards.
+- Admin user creation requires a school for teacher and collector roles.
+- Collector history now describes the account's visible school history instead
+  of claiming to be device-only.
+- README, screen documentation and data model updated for teachers, scanning,
+  school setup and briefs.
+- Version `0.4.2+7`.
+
 ## [0.4.1] — 2026-11-13
 
 ### Fixed
@@ -163,7 +204,8 @@ All notable changes to ReLearn are documented here. Format follows
 - Documentation: PRD, screen specification, stack, brand, data model, README,
   contributing workflow.
 
-[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/Icedmist/relearn/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/Icedmist/relearn/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/Icedmist/relearn/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Icedmist/relearn/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Icedmist/relearn/compare/v0.2.1...v0.3.0

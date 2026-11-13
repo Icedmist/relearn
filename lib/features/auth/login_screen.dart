@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/auth/session.dart';
 import '../../core/auth/session_lock.dart';
 import '../../core/config/app_config.dart';
 import '../../core/services/app_prefs.dart';
@@ -81,7 +82,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _goAfterAuth(String role) async {
-    final home = role == 'admin' ? '/admin/dashboard' : '/collector/home';
+    final profile = ref.read(appStoreProvider).profile;
+    final needsSchool =
+        _live &&
+        role != 'admin' &&
+        (profile == null || profile.schoolId == null);
+    final home = needsSchool ? '/school-setup' : homeForRole(role);
     if (!AppPrefs.onboardingSeen) {
       context.go('/onboarding?next=${Uri.encodeQueryComponent(home)}');
       return;

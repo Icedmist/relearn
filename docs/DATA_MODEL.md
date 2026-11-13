@@ -44,7 +44,8 @@ Mirrors `auth.users`; created by trigger on signup.
 |---|---|---|
 | id | uuid PK | FK → `auth.users.id` |
 | name | text | required |
-| role | `admin` \| `collector` | default `collector` |
+| role | `admin` \| `teacher` \| `collector` | default `collector` |
+| school_id | uuid FK → `schools` | required for teachers and collectors; null for admins |
 | active | boolean | default true |
 | created_at / updated_at | timestamptz | |
 
@@ -194,7 +195,8 @@ balance     = Σ points_ledger.points
 | No deletes | No delete policies; ledger mutation trigger; `voided` flags |
 | No unapproved materials | RPC checks `materials.allowed` and `active` |
 | No client-calculated points | RPC ignores any client-provided points |
-| Role enforcement | RLS + `is_admin()` / `is_collector()` in RPCs |
+| Role enforcement | RLS + `is_admin()` / `is_collector()` in RPCs; teachers are read-only |
+| School scope | `my_school_id()` filters beneficiaries, collections, redemptions and ledger for non-admins; RPCs reject beneficiaries outside the caller's school |
 
 ---
 

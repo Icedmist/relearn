@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -64,17 +65,26 @@ class CollectorHistoryScreen extends ConsumerWidget {
                 ),
               ),
               const StatusPill(
-                label: 'ALL SYNCED',
+                label: 'SCHOOL',
                 color: AppColors.leaf,
-                icon: Icons.cloud_done_outlined,
+                icon: Icons.school_outlined,
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            'All transactions from this device',
+            'Collections and redemptions visible to your account',
             style: Theme.of(context).textTheme.bodySmall
                 ?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => context.push('/briefs'),
+              icon: const Icon(Icons.summarize_outlined, size: 18),
+              label: const Text('Open school brief'),
+            ),
           ),
           const SizedBox(height: 18),
           Row(

@@ -12,6 +12,9 @@ mode uses the in-memory seed and never touches the network.
 | `/login` | Login / role select | Public | `features/auth/login_screen.dart` |
 | `/onboarding` | Onboarding / how-to | Public | `features/onboarding/onboarding_screen.dart` |
 | `/account` | Account centre | Staff | `features/account/account_screen.dart` |
+| `/school-setup` | Choose your school | School-less staff | `features/auth/school_setup_screen.dart` |
+| `/teacher/home` | Teacher home | Teacher | `features/teacher/teacher_home_screen.dart` |
+| `/briefs` | Briefs & history | Staff | `features/briefs/briefs_screen.dart` |
 | `/admin/dashboard` | Dashboard | Admin | `features/admin/dashboard_screen.dart` |
 | `/admin/schools` | Schools | Admin | `features/admin/schools_screen.dart` |
 | `/admin/beneficiaries` | Beneficiaries | Admin | `features/admin/beneficiaries_screen.dart` |
@@ -21,6 +24,7 @@ mode uses the in-memory seed and never touches the network.
 | `/admin/materials` | Materials & points | Admin | `features/admin/materials_screen.dart` |
 | `/admin/rewards` | Item shop | Admin | `features/admin/rewards_screen.dart` |
 | `/admin/reports` | Reports | Admin | `features/admin/reports_screen.dart` |
+| `/admin/briefs` | Briefs & history | Admin | `features/briefs/briefs_screen.dart` |
 | `/admin/users` | Users | Admin | `features/admin/users_screen.dart` |
 | `/collector/home` | Home | Collector | `features/collector/home_screen.dart` |
 | `/collector/scan` | Scan | Collector | `features/collector/scan_screen.dart` |
@@ -54,8 +58,12 @@ column on mobile. Brand panel shows logo, tagline, and a one-line explanation.
 **States:** idle, loading, invalid credentials, server unreachable, account
 deactivated, onboarding required.
 
-**Actions:** sign in → onboarding (first run) or role home. Demo mode still uses
-the in-memory store and never locks.
+**Actions:** sign in → onboarding (first run) or role home. A non-admin account
+with no school is sent to `/school-setup` first. Admin, teacher and collector
+accounts land on `/admin/dashboard`, `/teacher/home` and `/collector/home`
+respectively. A restored session is validated against an active staff profile;
+missing or inactive profiles sign out with a message. Demo mode still uses the
+in-memory store and never locks.
 
 ---
 
@@ -82,7 +90,7 @@ the in-memory store and never locks.
 - Profile card: name, email, role, initials and edit-name action.
 - Security: change password, fingerprint/face unlock toggle (Android/iOS),
   session-lock explanation and "Lock now".
-- App: replay the guide, version, data-mode note.
+- App: briefs & history, replay the guide, version, data-mode note.
 - Sign out with confirmation.
 
 **States:** demo mode (editing disabled, clear notice), biometrics unavailable,
@@ -90,6 +98,60 @@ biometric confirmation failed, password updated, name updated, save error.
 
 **Actions:** update name via `update_my_name`, update password via Supabase Auth,
 toggle biometrics, lock the session, sign out.
+
+---
+
+## 1c. Choose your school `/school-setup`
+
+**Purpose:** link a new teacher or collector to a school before they use the app.
+
+**Content**
+- Account name and role.
+- Explanation that history, briefs and beneficiary records are school-scoped.
+- Dropdown of active schools with the selected school's address.
+- "Join this school" and "Sign out".
+
+**States:** loading, no active schools (asks the user to contact an admin),
+saving, RPC error (for example, school already set).
+
+**Rules:** one self-link through `update_my_school`. Once set, only an admin can
+move the account. Admins are never school-bound.
+
+---
+
+## 1d. Teacher home `/teacher/home`
+
+**Purpose:** read-only landing page for teachers.
+
+**Content**
+- Greeting, date, school name and a READ ONLY pill.
+- Beneficiaries, kilograms and points for the teacher's school.
+- "School brief & history" and refresh.
+- Recent collections with beneficiary, materials, collector and points.
+- A reminder that teachers cannot collect, redeem or adjust points.
+
+**States:** no school linked (CTA to `/school-setup`), loading, empty activity,
+error via the shared store.
+
+---
+
+## 1e. Briefs & history `/briefs` and `/admin/briefs`
+
+**Purpose:** generate a copy-ready school or programme brief and review the
+matching transactions.
+
+**Content**
+- Scope: admins choose All schools or One school; teachers and collectors are
+  fixed to their own school.
+- Period: This week, This month or All time.
+- Brief: headline figures, top materials, collectors, per-school totals for the
+  global view, and the latest collections.
+- "Copy brief" writes the text to the clipboard.
+- History: collections and redemptions in the selected scope and period, with
+  voided rows marked and a 60-row display cap.
+
+**Rules:** the data is RLS-scoped. A school-linked account never receives another
+school's rows; the global scope exists only for admins.
 
 ---
 
@@ -238,28 +300,34 @@ atomically with redemption.
 - School filter (all schools by default).
 - Summary strip: rows and total points for the active tab.
 - Full rows for the current filter; no pagination.
+- "Briefs & history" opens the scoped brief and transaction view.
 - CSV export remains on the roadmap and is not shown in this build.
 
 ---
 
 ## 11. Admin — Users `/admin/users`
 
-**Purpose:** manage collectors and admins.
+**Purpose:** manage admins, teachers and collectors.
 
 **Content**
-- List: name, email, role and status.
+- List: name, email, role, school and status.
 - Create account (name, email, temporary password, role). Admins can create
-  both collectors and admins; the account can sign in immediately.
+  admins, teachers and collectors; the account can sign in immediately.
+- Teacher and collector accounts require an active school in the dialog.
 - Reset password (send link), deactivate/reactivate.
 - No inline role change in this build; change the profile in the database.
+
+**Rules:** teachers are read-only. Only admins and collectors can record,
+redeem or adjust points; the database RPCs enforce this as well as the UI.
 
 ---
 
 ## 12. Collector — Login `/login`
 
-Same screen as admin; collector credentials route to `/collector/home`.
-The Supabase session persists until sign-out or expiry. There is no offline
-login in this build.
+Same screen as admin; collector credentials route to `/collector/home`, teacher
+credentials to `/teacher/home`. A non-admin with no school goes to
+`/school-setup`. The Supabase session persists until sign-out or expiry. There
+is no offline login in this build.
 
 ---
 
@@ -284,15 +352,19 @@ login in this build.
 **Purpose:** identify a beneficiary fast.
 
 **Content**
-- Full-screen lookup UI with a scan frame and instructions.
-- Camera scanning is **not enabled in this build**; the screen says so.
-- "Enter ID manually" opens a beneficiary by public ID.
+- Full-screen camera preview with a scan frame, torch and camera-switch actions
+  on Android and iOS.
+- The QR payload is the public ID. A match opens the beneficiary card
+  immediately and stops the camera.
+- "Enter ID manually" is always available, including on web and when camera
+  permission is denied.
 - "Open a sample card" in demo mode only.
 
-**States:** unknown ID, blocked card, inactive beneficiary.
+**States:** camera permission denied, camera unavailable, unknown ID, blocked
+card, inactive beneficiary.
 
-**Rules:** the public ID is validated against the loaded beneficiary list before
-navigation.
+**Rules:** the scanned value is matched against the RLS-scoped beneficiary list
+before navigation, so a card from another school is reported as not found.
 
 ---
 
@@ -379,12 +451,15 @@ sync (re-check balance).
 **Purpose:** review today's work and correct mistakes.
 
 **Content**
-- Today's totals.
-- Transaction list (time, beneficiary, type, points, sync state).
-- Tap → detail with lines and collector.
+- Totals for collections, points earned and redemptions.
+- Transaction list (time, beneficiary, type, points, voided state) for every row
+  visible to the account.
+- "Open school brief" links to `/briefs`.
 - "Request void" opens a reason dialog; void requests are not available in this
   build, so the dialog explains that an admin must adjust the balance instead.
-- Date picker to view previous days.
+
+**Rules:** collectors and teachers see their school's history through RLS;
+admins see every school.
 
 ---
 
