@@ -24,7 +24,6 @@ class _RegisterBeneficiaryScreenState
   final _guardian = TextEditingController();
   BeneficiaryType _type = BeneficiaryType.pupil;
   String? _schoolId;
-  bool _importMode = false;
 
   @override
   void dispose() {
@@ -144,34 +143,12 @@ class _RegisterBeneficiaryScreenState
         PageHeader(
           eyebrow: 'Registration',
           title: 'Register beneficiary',
-          subtitle: 'One person at a time, or import a whole class from CSV.',
-          actions: [
-            SegmentedButton<bool>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(
-                  value: false,
-                  label: Text('Single entry'),
-                  icon: Icon(Icons.person_outline),
-                ),
-                ButtonSegment(
-                  value: true,
-                  label: Text('CSV import'),
-                  icon: Icon(Icons.upload_file_outlined),
-                ),
-              ],
-              selected: {_importMode},
-              onSelectionChanged: (value) =>
-                  setState(() => _importMode = value.first),
-            ),
-          ],
+          subtitle: 'The ID and QR are generated on the server after saving.',
         ),
         LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 900;
-            final form = _importMode
-                ? _CsvPanel(onBack: () => setState(() => _importMode = false))
-                : _buildForm(activeSchools);
+            final form = _buildForm(activeSchools);
             if (!wide) return form;
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,106 +280,6 @@ class _RegisterBeneficiaryScreenState
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CsvPanel extends StatelessWidget {
-  const _CsvPanel({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 38, horizontal: 20),
-              decoration: BoxDecoration(
-                color: AppColors.leaf.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.leaf.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.upload_file_outlined,
-                    size: 40,
-                    color: AppColors.leaf,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Drop a CSV here',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Columns: name, type, school, class, guardian_phone',
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'File import is not available in this build.',
-                        ),
-                      ),
-                    ),
-                    child: const Text('Choose file'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'The CSV template is not available in this build.',
-                        ),
-                      ),
-                    ),
-                    icon: const Icon(Icons.download_outlined, size: 18),
-                    label: const Text('Download template'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'CSV import is not available in this build.',
-                        ),
-                      ),
-                    ),
-                    child: const Text('Preview import'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Valid rows import; invalid rows are reported with row numbers. '
-              'Imports are idempotent per file hash to prevent double uploads.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.muted, height: 1.5),
-            ),
-          ],
         ),
       ),
     );

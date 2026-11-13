@@ -128,13 +128,13 @@ class AdminDashboardScreen extends ConsumerWidget {
                 label: 'Active beneficiaries',
                 value: formatPoints(state.totalBeneficiaries),
                 icon: Icons.people_alt_outlined,
-                hint: '+12 this week',
+                hint: 'active cards',
               ),
               KpiCard(
                 label: 'Collected this month',
                 value: '${formatPoints(state.totalKg.round())} kg',
                 icon: Icons.scale_outlined,
-                hint: '+8.4%',
+                hint: 'this month',
                 accent: AppColors.sky,
               ),
               KpiCard(

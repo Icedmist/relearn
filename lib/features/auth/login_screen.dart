@@ -49,12 +49,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _restoreSession() async {
     final auth = Supabase.instance.client.auth;
     if (auth.currentSession == null) return;
-    final role = await _currentRole();
+    try {
+      final role = await _currentRole();
+      await ref.read(appStoreProvider.notifier).reload();
+      if (!mounted) return;
+      final store = ref.read(appStoreProvider);
+      if (role == null || store.profile == null || store.error != null) {
+        await _expireSession(
+          store.error ?? 'Your profile could not be loaded. Sign in again.',
+        );
+        return;
+      }
+      ref.read(sessionLockProvider.notifier).recordActivity();
+      await _goAfterAuth(role);
+    } catch (error) {
+      if (!mounted) return;
+      await _expireSession('Your session expired. Sign in again.');
+    }
+  }
+
+  /// Clears a stale or incomplete session instead of opening a broken screen.
+  Future<void> _expireSession(String message) async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {
+      // The local session is invalid either way.
+    }
+    ref.invalidate(appStoreProvider);
     if (!mounted) return;
-    await ref.read(appStoreProvider.notifier).reload();
-    if (!mounted) return;
-    await _goAfterAuth(role);
-    ref.read(sessionLockProvider.notifier).checkNow();
+    _notify(message);
   }
 
   Future<void> _goAfterAuth(String role) async {
@@ -67,20 +90,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _openGuide() async {
-    final home = _isAdmin ? '/admin/dashboard' : '/collector/home';
-    context.push('/onboarding?next=${Uri.encodeQueryComponent(home)}');
+    // The guide is public. It always returns to login; the signed-in role is
+    // resolved after authentication, never from a toggle on this screen.
+    context.push('/onboarding');
   }
 
-  Future<String> _currentRole() async {
+  Future<String?> _currentRole() async {
     final client = Supabase.instance.client;
     final user = client.auth.currentUser;
-    if (user == null) return 'collector';
+    if (user == null) return null;
     final row = await client
         .from('profiles')
-        .select('role')
+        .select('role, active')
         .eq('id', user.id)
         .maybeSingle();
-    return row?['role'] as String? ?? 'collector';
+    if (row == null || row['active'] == false) return null;
+    return row['role'] as String?;
   }
 
   Future<void> _signIn() async {
@@ -99,8 +124,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _password.text,
       );
       final role = await _currentRole();
+      if (role == null) {
+        await _expireSession(
+          'This account has no active staff profile. Contact an admin.',
+        );
+        return;
+      }
       await ref.read(appStoreProvider.notifier).reload();
       if (!mounted) return;
+      final store = ref.read(appStoreProvider);
+      if (store.error != null || store.profile == null) {
+        await _expireSession(
+          store.error ?? 'Your profile could not be loaded. Try again.',
+        );
+        return;
+      }
       ref.read(sessionLockProvider.notifier).recordActivity();
       await _goAfterAuth(role);
     } on AuthException catch (error) {

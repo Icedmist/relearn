@@ -98,20 +98,20 @@ toggle biometrics, lock the session, sign out.
 **Purpose:** a 30-second health check of the programme.
 
 **Content**
-- Greeting + date + school filter (P1).
-- KPI cards: beneficiaries registered, kg collected, points awarded, points
-  redeemed, rewards distributed. Each with delta vs previous period.
-- "Collections over time" chart (7/30/90 days).
+- Greeting from the signed-in profile, plus the current date.
+- KPI cards: active beneficiaries, kg collected this month, points awarded,
+  points redeemed, rewards distributed.
+- "Collections over time" chart for the last 7 days.
 - "Top materials" horizontal bars.
-- "Recent activity" list: collector, beneficiary, material/points, time.
+- "Recent activity" list: beneficiary, materials/points, collector, time.
 - Low-stock alert banner when any reward stock ≤ 10.
 
-**Actions:** change period; open beneficiary; open report.
+**Actions:** open reports; register a beneficiary; open a beneficiary from the
+activity list; restock from the low-stock banner.
 
-**States:** loading skeletons, empty programme (CTA to register first school),
-error retry.
+**States:** loading bar, empty programme, error banner with dismiss/retry.
 
-**Demo:** KPIs and activity come from `DemoStore`.
+**Demo:** KPIs and activity come from the in-memory seed.
 
 ---
 
@@ -139,32 +139,25 @@ new registrations.
 **Content**
 - Search by name/ID, filters: school, type (pupil/teacher), class, status.
 - Table/cards: name, public ID, school, type, class, balance, card status.
-- Bulk actions: export CSV (P1), print selected cards.
-- Primary CTA: "Register beneficiary".
-- Entry point for CSV import.
+- Primary CTA: "Register beneficiary"; print-cards shortcut.
+- No bulk actions or CSV import in this build.
 
-**Actions:** open profile; register; import CSV; print.
+**Actions:** open profile; register; open the print-cards screen.
 
 ---
 
 ## 5. Admin — Register beneficiary `/admin/beneficiaries/new`
 
-**Purpose:** create one person or import many.
+**Purpose:** create one person at a time.
 
-**Single form**
+**Content**
 - Full name (required), type (pupil/teacher), school (required), class
   (required for pupils), guardian phone (optional).
-- On save: server generates `public_id`; show success sheet with QR preview and
-  "Print card" / "Register another" actions.
+- On save: the server generates `public_id`; a success dialog shows the QR and
+  ID with "View profile" and "Register another" actions.
 
-**CSV import (P1)**
-- Download template (`name,type,school,class,guardian_phone`).
-- Drag/drop or pick file.
-- Validation preview: N valid, M errors with row numbers and reasons.
-- Import valid rows only after confirmation; download error report.
-- Import is idempotent per file hash (guard against double upload).
-
-**States:** saving, duplicate warning, invalid school, partial import result.
+**States:** saving, invalid school, server error. CSV import remains on the
+roadmap and is not shown in this build.
 
 ---
 
@@ -174,14 +167,14 @@ new registrations.
 
 **Content**
 - Header: name, type, school, class, status, public ID.
-- QR preview (regenerate print), "Print card", "Replace card", "Block card".
-- Balance card with large number.
-- Tabs: History (ledger), Collections, Redemptions, Notes.
-- Full ledger with type, points ±, reference, actor, reason, timestamp.
-- "Adjust points" action (P1) with mandatory reason.
+- ID card with QR and public ID, "Print card" (single-card PDF).
+- Details card and a large balance.
+- Points history from the append-only ledger with type, points ±, actor and
+  timestamp.
+- "Block card" toggle and "Adjust points" with a mandatory reason.
 
-**Rules:** block card makes scans fail with a clear collector message; reprint
-keeps the ID; no delete anywhere.
+**Rules:** a blocked card cannot be opened for collection or redemption; the
+public ID never changes; no delete anywhere.
 
 ---
 
@@ -190,17 +183,18 @@ keeps the ID; no delete anywhere.
 **Purpose:** produce cheap physical cards.
 
 **Content**
-- Filters: school (required), class (optional), include inactive (off).
-- Selection list with select-all.
-- Live A4 preview, 8 cards per page (2 × 4), crop marks.
-- Card face: ReLearn mark, school name, beneficiary name, class, QR, public ID,
-  "This card belongs to your school. Return it if found."
-- Export/print button → PDF via `pdf`/`printing`.
+- Filters: school (defaults to the first school), class (optional).
+- Card previews with select-all; an empty selection means every filtered card.
+- A4 preview of the first 12 filtered cards.
+- Card face: ReLearn mark, school name, beneficiary name, type, class, public
+  ID, 25 mm QR and "This card belongs to your school. Return it if found."
+- "Export PDF" builds an eight-cards-per-A4-sheet PDF locally and opens the
+  system print/save dialog via `printing`.
 
-**States:** no beneficiaries, generating PDF, print dialog.
+**States:** no beneficiaries, generating PDF, print dialog, PDF error.
 
-**Notes:** QR encodes only the public ID; minimum QR size 25 mm; quiet zone
-preserved.
+**Notes:** QR encodes only the public ID; there are no crop marks; printing
+happens through the operating system or browser dialog.
 
 ---
 
@@ -237,15 +231,14 @@ atomically with redemption.
 
 ## 10. Admin — Reports `/admin/reports`
 
-**Purpose:** exportable truth.
+**Purpose:** review transaction-level truth on screen.
 
 **Content**
 - Tabs: Collections | Redemptions | Points ledger.
-- Filters: school, date range, material/reward, collector.
-- Summary strip: rows, total kg, points in/out.
-- Table with pagination.
-- "Export CSV" respects active filters.
-- Per-school / per-collector summary (P2).
+- School filter (all schools by default).
+- Summary strip: rows and total points for the active tab.
+- Full rows for the current filter; no pagination.
+- CSV export remains on the roadmap and is not shown in this build.
 
 ---
 
@@ -254,19 +247,19 @@ atomically with redemption.
 **Purpose:** manage collectors and admins.
 
 **Content**
-- Table: name, email, role, status, last active.
+- List: name, email, role and status.
 - Create account (name, email, temporary password, role). Admins can create
   both collectors and admins; the account can sign in immediately.
 - Reset password (send link), deactivate/reactivate.
-- Role change restricted to admins.
+- No inline role change in this build; change the profile in the database.
 
 ---
 
 ## 12. Collector — Login `/login`
 
 Same screen as admin; collector credentials route to `/collector/home`.
-Session persists (secure storage). Offline login is allowed with a cached
-session for 30 days (P1).
+The Supabase session persists until sign-out or expiry. There is no offline
+login in this build.
 
 ---
 

@@ -84,6 +84,26 @@ class AdminShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appStoreProvider);
+    if (!AppConfig.demoMode) {
+      if (state.loading && state.profile == null) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      if (state.profile == null) {
+        return _SessionProblem(
+          message:
+              state.error ??
+              'Your staff profile could not be loaded. Sign in again.',
+          onRetry: () => ref.read(appStoreProvider.notifier).reload(),
+          onSignOut: () => signOutAndGo(context, ref),
+        );
+      }
+      if (!state.profile!.isAdmin) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) context.go('/collector/home');
+        });
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+    }
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 940;
@@ -382,6 +402,78 @@ class _ErrorBanner extends StatelessWidget {
               icon: const Icon(Icons.close, size: 16),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionProblem extends StatelessWidget {
+  const _SessionProblem({
+    required this.message,
+    required this.onRetry,
+    required this.onSignOut,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.lock_outline,
+                      size: 34,
+                      color: AppColors.leaf,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Admin access unavailable',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.muted),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: onSignOut,
+                            child: const Text('Sign out'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: onRetry,
+                            child: const Text('Retry'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

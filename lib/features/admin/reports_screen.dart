@@ -54,19 +54,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         PageHeader(
           eyebrow: 'Reporting',
           title: 'Reports',
-          subtitle:
-              'Transaction-level truth. Exports respect the active filters.',
-          actions: [
-            FilledButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('CSV export is not available in this build.'),
-                ),
-              ),
-              icon: const Icon(Icons.download_outlined, size: 18),
-              label: const Text('Export CSV'),
-            ),
-          ],
+          subtitle: 'Transaction-level truth for collections, redemptions and the ledger.',
         ),
         Card(
           child: Padding(
