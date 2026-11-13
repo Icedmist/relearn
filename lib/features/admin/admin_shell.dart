@@ -61,6 +61,12 @@ const _items = [
     'Reports',
   ),
   _NavItem(
+    '/admin/briefs',
+    Icons.summarize_outlined,
+    Icons.summarize_rounded,
+    'Briefs',
+  ),
+  _NavItem(
     '/admin/users',
     Icons.manage_accounts_outlined,
     Icons.manage_accounts_rounded,
@@ -98,8 +104,13 @@ class AdminShell extends ConsumerWidget {
         );
       }
       if (!state.profile!.isAdmin) {
+        final destination = state.profile!.isTeacher
+            ? '/teacher/home'
+            : state.profile!.schoolId == null
+            ? '/school-setup'
+            : '/collector/home';
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) context.go('/collector/home');
+          if (context.mounted) context.go(destination);
         });
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }

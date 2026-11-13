@@ -15,6 +15,8 @@ import '../../features/admin/rewards_screen.dart';
 import '../../features/admin/schools_screen.dart';
 import '../../features/admin/users_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/auth/school_setup_screen.dart';
+import '../../features/briefs/briefs_screen.dart';
 import '../../features/collector/beneficiary_card_screen.dart';
 import '../../features/collector/collector_shell.dart';
 import '../../features/collector/history_screen.dart';
@@ -25,6 +27,7 @@ import '../../features/collector/scan_screen.dart';
 import '../../features/collector/search_screen.dart';
 import '../../features/collector/success_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/teacher/teacher_home_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/login',
@@ -49,6 +52,15 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/account',
       builder: (context, state) => const AccountScreen(),
+    ),
+    GoRoute(
+      path: '/school-setup',
+      builder: (context, state) => const SchoolSetupScreen(),
+    ),
+    GoRoute(path: '/briefs', builder: (context, state) => const BriefsScreen()),
+    GoRoute(
+      path: '/teacher/home',
+      builder: (context, state) => const TeacherHomeScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) =>
@@ -91,6 +103,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/admin/reports',
           builder: (context, state) => const ReportsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/briefs',
+          builder: (context, state) => const BriefsView(),
         ),
         GoRoute(
           path: '/admin/users',

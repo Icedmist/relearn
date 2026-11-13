@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/Icedmist/relearn/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Icedmist/relearn/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-v0.4.1-2E9E5B"></a>
+  <a href="#status"><img alt="Status" src="https://img.shields.io/badge/status-v0.4.2-2E9E5B"></a>
   <a href="#stack"><img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B"></a>
   <a href="#stack"><img alt="Supabase" src="https://img.shields.io/badge/Backend-Supabase-3ECF8E"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -22,21 +22,24 @@ rates, and the pupil spends those points on pencils, exercise books, bags and
 other school supplies.
 
 **A pupil needs one printed card, not a phone or an account.** The card carries
-a public ID and a QR code. Staff look the card up by ID (camera scanning is on
-the roadmap) and all points and personal data stay in the database.
+a public ID and a QR code. Staff scan the card with the Android camera, or type
+the ID printed under the QR, and all points and personal data stay in the
+database.
 
-ReLearn ships as one Flutter codebase with two experiences:
+ReLearn ships as one Flutter codebase with three experiences:
 
 - **Admin web app** — schools, beneficiaries, card printing, materials and
-  rates, item shop, reports, staff accounts.
-- **Android collector app** — open a pupil card, record a collection, redeem an
-  item, review today's history.
+  rates, item shop, reports, briefs, staff accounts.
+- **Android collector app** — scan a pupil card, record a collection, redeem an
+  item, review history.
+- **Teacher view** — read-only school overview, history and briefs for staff who
+  do not collect.
 
-> <a id="status"></a>**Status: v0.4.1.** Live Supabase authentication,
+> <a id="status"></a>**Status: v0.4.2.** Live Supabase authentication,
 > PostgreSQL, Row Level Security, server-side points and redemption, card PDF
-> printing, product photo upload and biometric session lock are working.
-> Camera scanning, CSV import/export and offline sync are **not** implemented
-> yet; the screens say so instead of pretending.
+> printing, camera QR scanning, school-scoped history and briefs, product photo
+> upload and biometric session lock are working. CSV import/export and offline
+> sync are **not** implemented yet; the screens say so instead of pretending.
 
 ---
 
@@ -70,9 +73,10 @@ ReLearn ships as one Flutter codebase with two experiences:
    `RL-0042-7K3Q` and a QR code that contains only that ID.
 3. **Print the card.** Export an A4 sheet of eight cards as a PDF and print it
    on a local printer.
-4. **Collect recyclables.** In the collector app, enter the ID printed under
-   the QR, choose the materials and quantities, and confirm. The server
-   recalculates the points and writes an append-only ledger entry.
+4. **Collect recyclables.** In the collector app, scan the QR on the card (or
+   enter the ID printed under it), choose the materials and quantities, and
+   confirm. The server recalculates the points and writes an append-only ledger
+   entry.
 5. **Redeem.** Open the same card, choose an item from the shop, and confirm.
    The server checks the balance and stock inside one transaction, then deducts
    points and stock.
@@ -104,15 +108,20 @@ changing a rate never rewrites history.
   gallery or camera; restock; deactivate; delete.
 - **Reports** — collections, redemptions and the points ledger, filtered by
   school, with row and points totals.
-- **Users** — create staff accounts, set the role, activate or deactivate a
-  staff member, and send a password-reset email.
+- **Briefs & history** — generate a copy-ready programme or single-school brief
+  for a week, month or all time, and review the matching transactions.
+- **Users** — create admin, teacher and collector accounts, assign every
+  teacher and collector to a school, activate or deactivate a staff member, and
+  send a password-reset email.
 - **Account centre** — edit your name, change your password, enable
-  fingerprint/face unlock, replay the guide and sign out.
+  fingerprint/face unlock, open briefs, replay the guide and sign out.
 
 ### Collector — Android
 
 - **Home** — today's totals, current materials and quick actions.
-- **Find a pupil** — enter the public ID printed under the QR code.
+- **Scan a card** — open the camera and read the QR code; the matching pupil
+  card opens automatically. Torch, camera switch and manual ID entry are
+  included.
 - **Search** — look up a beneficiary by name, ID, school or class.
 - **Beneficiary card** — balance, recent ledger, collection and redemption
   actions.
@@ -120,9 +129,19 @@ changing a rate never rewrites history.
   see a live points preview, and save through the server RPC.
 - **Redeem** — browse in-stock items, check the balance, and confirm a
   redemption.
-- **History** — today's collections and redemptions for the signed-in
-  collector.
+- **History** — collections and redemptions visible to the signed-in staff
+  member (school-scoped for teachers and collectors).
+- **School brief** — copy a ready-to-send summary and review the same period's
+  transactions.
 - **Account centre** — the same profile, security and guide tools as admin.
+
+### Teacher — Android or Web (read-only)
+
+- **School home** — beneficiary count, kilograms, points and recent collections
+  for the teacher's own school.
+- **Briefs & history** — school-scoped brief and transaction history.
+- **No collection actions** — teachers cannot record, redeem, adjust or void.
+  Both the UI and the database RPCs enforce this.
 
 ### Shared
 
@@ -130,8 +149,10 @@ changing a rate never rewrites history.
 - Live mode reads and writes the hosted Supabase project; demo mode runs on an
   in-memory seed with no network and no persistence.
 - Row Level Security on every table, with server-side points and redemption
-  functions.
-- First-run onboarding and a replayable “How to use ReLearn” guide.
+  functions. Beneficiaries, collections, redemptions and the ledger are
+  school-scoped for teachers and collectors; admins see every school.
+- First-run onboarding, a one-time school link for new staff, and a replayable
+  “How to use ReLearn” guide.
 - Live sessions lock after 15 minutes of inactivity. Unlock with fingerprint or
   face on Android, or the account password everywhere.
 
@@ -142,7 +163,6 @@ changing a rate never rewrites history.
 These are shown honestly in the UI, usually with a disabled control or a short
 explanation:
 
-- **Camera QR scanning.** Collectors enter the ID manually today.
 - **CSV beneficiary import.** The registration screen offers single entry only.
 - **CSV report export.** Reports are on screen; export is planned.
 - **Offline queue and sync.** The app requires a connection for live data.
@@ -169,8 +189,9 @@ explanation:
 | 9 | Materials & points | `/admin/materials` |
 | 10 | Item shop | `/admin/rewards` |
 | 11 | Reports | `/admin/reports` |
-| 12 | Users | `/admin/users` |
-| 13 | Account | `/account` |
+| 12 | Briefs & history | `/admin/briefs` |
+| 13 | Users | `/admin/users` |
+| 14 | Account | `/account` |
 
 ### Collector — Android
 
@@ -179,14 +200,23 @@ explanation:
 | 1 | Login | `/login` |
 | 2 | Onboarding / how-to | `/onboarding` |
 | 3 | Home | `/collector/home` |
-| 4 | Find a pupil | `/collector/scan` |
+| 4 | Scan a card | `/collector/scan` |
 | 5 | Search | `/collector/search` |
 | 6 | Beneficiary card | `/collector/beneficiary/:id` |
 | 7 | Record collection | `/collector/beneficiary/:id/collect` |
 | 8 | Redeem | `/collector/beneficiary/:id/redeem` |
 | 9 | Success | `/collector/success` |
 | 10 | History | `/collector/history` |
-| 11 | Account | `/account` |
+| 11 | Briefs & history | `/briefs` |
+| 12 | Account | `/account` |
+
+### Teacher and first-run — Android or Web
+
+| # | Screen | Route |
+|---|---|---|
+| 1 | School setup | `/school-setup` |
+| 2 | Teacher home | `/teacher/home` |
+| 3 | Briefs & history | `/briefs` |
 
 Full content, actions and states: [`docs/SCREENS.md`](docs/SCREENS.md).
 
@@ -206,6 +236,13 @@ Every staff member can open **Account** from the top bar or the admin drawer.
   lock screen can unlock with biometrics or the password, or sign out.
 - **Demo mode** — never locks, never persists security settings, and shows a
   “changes are not saved” banner.
+- **Roles** — `admin` sees every school; `collector` records collections and
+  redemptions for one school; `teacher` is read-only for one school. Only
+  admins and collectors can write points.
+- **School membership** — every teacher and collector belongs to an active
+  school. **Admin → Users** requires a school when creating either role, and a
+  new account that has no school is sent to `/school-setup` after sign-in. The
+  `update_my_school` RPC allows one self-link; later moves need an admin.
 - **First sign-in** — shows the onboarding guide once. Replay it from
   **Account → How to use ReLearn** or from the login screen.
 - **Stale sessions** — if a saved session cannot load its staff profile, the app
@@ -242,8 +279,8 @@ You can also print one card from a beneficiary profile with **Print card**.
 3. Complete or skip the onboarding guide.
 4. Open **Beneficiaries → Amina Yusuf** to see the QR, balance and ledger.
 5. Switch to the collector app with the QR icon in the top bar.
-6. Tap **Find a pupil** and enter `RL-0042-7K3Q`, or use the demo sample-card
-   action.
+6. Tap **Scan a card** and use the demo sample-card action, or enter
+   `RL-0042-7K3Q` manually.
 7. Tap **Record collection**, adjust the material quantities and confirm.
 8. See the success screen with the new balance.
 9. Redeem an **Exercise book** and watch points and stock drop.
@@ -264,6 +301,7 @@ in demo mode.
 | Routing | go_router |
 | Backend | Supabase (Postgres, Auth, Storage, RLS, RPC) |
 | QR generation | `qr_flutter` in the UI, `pdf`/`barcode` in card PDFs |
+| QR scanning | `mobile_scanner` (Android camera) with manual ID fallback |
 | Card PDF | `pdf` + `printing` |
 | Product photos | `image_picker` + Supabase Storage |
 | Session security | `local_auth` + `shared_preferences` |
@@ -336,7 +374,9 @@ flutter run -d chrome --dart-define-from-file=.env
 Live mode turns on automatically when both values are present. Set
 `DEMO_MODE=true` in `.env` to force the in-memory store.
 
-Accounts created from **Admin → Users** can sign in immediately. The hosted
+Accounts created from **Admin → Users** can sign in immediately. Every teacher
+and collector must be assigned to an active school; an account created without
+one is sent to **Choose your school** after its first sign-in. The hosted
 project currently contains seeded demo schools and catalogue items; replace
 them with real programme data before a pilot.
 
@@ -372,6 +412,7 @@ Migrations:
 | `0004_item_images.sql` | Public `item-images` bucket, admin-only writes, `image_url` columns |
 | `0005_reward_details.sql` | Item category and description for marketplace cards |
 | `0006_update_my_name.sql` | Staff can rename themselves via a safe RPC |
+| `0007_school_membership.sql` | Portable public IDs, teacher role, school membership, school-scoped RLS and read-only teacher RPC guards |
 
 3. Create the first admin user in **Authentication → Users**, then promote the
    profile. Every self-signup starts as a collector; admins are explicit:
@@ -436,7 +477,7 @@ beneficiaries 1──* points_ledger            balance = Σ ledger.points
 | Table | Purpose |
 |---|---|
 | `schools` | Programme schools |
-| `profiles` | Staff users (admin / collector) |
+| `profiles` | Staff users (admin / teacher / collector), each non-admin linked to a school |
 | `beneficiaries` | Pupils and teachers with a public ID |
 | `materials` | Accepted materials, units and rates |
 | `collections` / `collection_items` | Collection header and rate-snapshotted lines |
@@ -500,7 +541,8 @@ builds the APK and a zipped web admin and publishes both to GitHub Releases.
 | **1 · Registration and cards** | Auth, schools, beneficiaries, IDs, QR, printable card PDFs | ✅ Done |
 | **2 · Collection** | Collector sign-in, manual lookup, entry, history | ✅ Done |
 | **3 · Points and rewards** | Server points engine, balances, catalogue, atomic redemption | ✅ Done |
-| **4 · Field hardening** | Camera scanning, CSV import/export, offline queue, production keystore | Next |
+| **4 · School teams and scanning** | Teacher accounts, school membership, QR scanning, school/global briefs | ✅ Done |
+| **5 · Field hardening** | CSV import/export, offline queue, production keystore | Next |
 
 Post-MVP ideas: pupil balance lookup, leaderboards, SMS/WhatsApp notifications,
 iOS, multi-language, recycler buyer integration and impact reporting.

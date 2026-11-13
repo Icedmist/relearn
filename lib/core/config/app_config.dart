@@ -6,7 +6,7 @@
 abstract final class AppConfig {
   static const appName = 'ReLearn';
   static const tagline = 'Recycle to Learn.';
-  static const version = '0.4.1';
+  static const version = '0.4.2';
 
   /// The app locks after this much inactivity in live mode.
   static const sessionIdleTimeout = Duration(minutes: 15);

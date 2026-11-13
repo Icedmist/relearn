@@ -48,7 +48,8 @@ class AccountScreen extends ConsumerWidget {
     final name = _name(ref);
     final email = _email(ref);
     final role = _role(ref);
-    final admin = ref.watch(appStoreProvider).profile?.isAdmin ?? true;
+    final profile = ref.watch(appStoreProvider).profile;
+    final admin = profile?.isAdmin ?? true;
 
     return Scaffold(
       appBar: AppBar(
@@ -59,7 +60,7 @@ class AccountScreen extends ConsumerWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go(admin ? '/admin/dashboard' : '/collector/home');
+              context.go(homeForRole(profile?.role ?? 'collector'));
             }
           },
           icon: const Icon(Icons.arrow_back),
@@ -96,8 +97,19 @@ class AccountScreen extends ConsumerWidget {
                                 label: role.toUpperCase(),
                                 icon: admin
                                     ? Icons.admin_panel_settings_outlined
+                                    : profile?.isTeacher == true
+                                    ? Icons.school_outlined
                                     : Icons.qr_code_scanner,
                               ),
+                              if (profile?.schoolName != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  profile!.schoolName!,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -238,6 +250,23 @@ class AccountScreen extends ConsumerWidget {
                 Card(
                   child: Column(
                     children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.summarize_outlined,
+                          color: AppColors.leaf,
+                        ),
+                        title: const Text('Briefs & history'),
+                        subtitle: Text(
+                          admin
+                              ? 'Copy a programme or school brief and review '
+                                    'every transaction.'
+                              : 'Copy a school brief and review your school’s '
+                                    'transactions.',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.push('/briefs'),
+                      ),
+                      const Divider(height: 1),
                       ListTile(
                         leading: const Icon(
                           Icons.menu_book_outlined,

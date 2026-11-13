@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -55,6 +56,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           eyebrow: 'Reporting',
           title: 'Reports',
           subtitle: 'Transaction-level truth for collections, redemptions and the ledger.',
+          actions: [
+            FilledButton.tonalIcon(
+              onPressed: () => context.go('/admin/briefs'),
+              icon: const Icon(Icons.summarize_outlined, size: 18),
+              label: const Text('Briefs & history'),
+            ),
+          ],
         ),
         Card(
           child: Padding(

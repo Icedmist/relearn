@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:relearn/app.dart';
 import 'package:relearn/core/router/app_router.dart';
+import 'package:relearn/features/collector/scan_screen.dart';
 
 const _routes = <String>[
   '/login',
   '/onboarding',
   '/account',
+  '/school-setup',
+  '/briefs',
+  '/teacher/home',
   '/admin/dashboard',
   '/admin/schools',
   '/admin/beneficiaries',
@@ -17,6 +21,7 @@ const _routes = <String>[
   '/admin/materials',
   '/admin/rewards',
   '/admin/reports',
+  '/admin/briefs',
   '/admin/users',
   '/collector/home',
   '/collector/search',
@@ -37,6 +42,8 @@ Future<void> _pumpAt(WidgetTester tester, Size size, String route) async {
 }
 
 void main() {
+  ScanScreen.cameraDisabledForTests = true;
+
   tearDown(() {
     appRouter.go('/login');
   });

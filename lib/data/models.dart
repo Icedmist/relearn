@@ -181,6 +181,8 @@ class StaffUser {
     required this.email,
     required this.role,
     required this.active,
+    this.schoolId,
+    this.schoolName,
     this.lastActive,
   });
 
@@ -189,10 +191,18 @@ class StaffUser {
   final String email;
   final String role;
   final bool active;
+  final String? schoolId;
+  final String? schoolName;
   final DateTime? lastActive;
 
   bool get isAdmin => role == 'admin';
-  String get roleLabel => isAdmin ? 'Admin' : 'Collector';
+  bool get isTeacher => role == 'teacher';
+  bool get isCollector => role == 'collector';
+  String get roleLabel => switch (role) {
+    'admin' => 'Admin',
+    'teacher' => 'Teacher',
+    _ => 'Collector',
+  };
 }
 
 class LedgerEntry {

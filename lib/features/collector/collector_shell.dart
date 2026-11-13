@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/widgets/common.dart';
 import '../../data/app_store.dart';
 
@@ -24,15 +25,36 @@ class CollectorShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appStoreProvider);
+    final profile = state.profile;
+    if (!AppConfig.demoMode && profile != null) {
+      if (profile.isTeacher) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) context.go('/teacher/home');
+        });
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      if (!profile.isAdmin && profile.schoolId == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) context.go('/school-setup');
+        });
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+    }
     return Scaffold(
       appBar: AppBar(
         title: const BrandLogo(height: 30),
         actions: [
           const SizedBox(width: 8),
+          if (profile?.isAdmin ?? !state.isLive)
+            IconButton(
+              tooltip: 'Admin dashboard',
+              onPressed: () => context.go('/admin/dashboard'),
+              icon: const Icon(Icons.dashboard_outlined, size: 20),
+            ),
           IconButton(
-            tooltip: 'Admin dashboard',
-            onPressed: () => context.go('/admin/dashboard'),
-            icon: const Icon(Icons.dashboard_outlined, size: 20),
+            tooltip: 'Briefs & history',
+            onPressed: () => context.push('/briefs'),
+            icon: const Icon(Icons.summarize_outlined, size: 20),
           ),
           IconButton(
             tooltip: 'Account',

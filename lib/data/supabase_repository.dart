@@ -340,6 +340,7 @@ class SupabaseRepository {
     required String email,
     required String password,
     required String role,
+    required String? schoolId,
   }) async {
     final auth = _client.auth;
     final adminRefresh = auth.currentSession?.refreshToken;
@@ -348,7 +349,7 @@ class SupabaseRepository {
       response = await auth.signUp(
         email: email,
         password: password,
-        data: {'name': name},
+        data: {'name': name, 'school_id': ?schoolId},
       );
     } finally {
       if (adminRefresh != null) {
@@ -363,9 +364,13 @@ class SupabaseRepository {
 
     await _client
         .from('profiles')
-        .update({'name': name, 'role': role})
+        .update({'name': name, 'role': role, 'school_id': schoolId})
         .eq('id', user.id);
     return user.id;
+  }
+
+  Future<void> updateMySchool(String schoolId) async {
+    await _client.rpc('update_my_school', params: {'p_school_id': schoolId});
   }
 
   /// Uploads an item photo to the public `item-images` bucket and returns its
@@ -540,6 +545,8 @@ class SupabaseRepository {
     email: row['email'] as String? ?? '',
     role: row['role'] as String? ?? 'collector',
     active: row['active'] as bool? ?? true,
+    schoolId: row['school_id'] as String?,
+    schoolName: row['school_name'] as String?,
     lastActive: row['last_sign_in_at'] == null
         ? null
         : DateTime.tryParse(row['last_sign_in_at'] as String)?.toLocal(),

@@ -789,9 +789,11 @@ class AppStore extends Notifier<AppState> {
     required String email,
     required String password,
     required String role,
+    required String? schoolId,
   }) async {
     final repo = _repo;
     if (repo == null) {
+      final school = schoolId == null ? null : state.schoolById(schoolId);
       state = state.copyWith(
         users: [
           ...state.users,
@@ -801,6 +803,8 @@ class AppStore extends Notifier<AppState> {
             email: email,
             role: role,
             active: true,
+            schoolId: schoolId,
+            schoolName: school?.name,
           ),
         ],
       );
@@ -812,6 +816,7 @@ class AppStore extends Notifier<AppState> {
         email: email,
         password: password,
         role: role,
+        schoolId: schoolId,
       );
       await reload(showLoading: false);
       return null;
@@ -832,6 +837,8 @@ class AppStore extends Notifier<AppState> {
               email: u.email,
               role: u.role,
               active: active,
+              schoolId: u.schoolId,
+              schoolName: u.schoolName,
               lastActive: u.lastActive,
             )
           else
@@ -840,6 +847,38 @@ class AppStore extends Notifier<AppState> {
     );
     final repo = _repo;
     if (repo != null) _write(repo.setStaffActive(id, active));
+  }
+
+  /// Links the signed-in staff member to their school for the first time.
+  /// Returns null on success or a human-readable error message.
+  Future<String?> setMySchool(String schoolId) async {
+    final repo = _repo;
+    if (repo == null) {
+      final school = state.schoolById(schoolId);
+      if (state.profile != null) {
+        state = state.copyWith(
+          profile: StaffUser(
+            id: state.profile!.id,
+            name: state.profile!.name,
+            email: state.profile!.email,
+            role: state.profile!.role,
+            active: state.profile!.active,
+            schoolId: schoolId,
+            schoolName: school?.name,
+            lastActive: state.profile!.lastActive,
+          ),
+        );
+      }
+      return null;
+    }
+    try {
+      await repo.updateMySchool(schoolId);
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      _fail(error);
+      return _message(error);
+    }
   }
 
   void addMaterial({

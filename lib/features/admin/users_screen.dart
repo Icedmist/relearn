@@ -37,13 +37,17 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
       email: 'musa@relearn.app',
       role: 'collector',
       active: true,
+      schoolId: 'sch-1',
+      schoolName: 'Gombe Model Primary School',
     ),
     const StaffUser(
       id: 'usr-4',
       name: 'Aisha Garba',
       email: 'aisha@relearn.app',
-      role: 'collector',
+      role: 'teacher',
       active: true,
+      schoolId: 'sch-1',
+      schoolName: 'Gombe Model Primary School',
     ),
     const StaffUser(
       id: 'usr-5',
@@ -51,6 +55,8 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
       email: 'peter@relearn.app',
       role: 'collector',
       active: false,
+      schoolId: 'sch-2',
+      schoolName: 'Federal University Staff School',
     ),
   ];
   final _demoActive = <String, bool>{};
@@ -127,8 +133,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Collectors can only scan, record and redeem. They cannot change rates, view admin reports or delete history. '
-                    'Row Level Security enforces this on the server, not just in the UI.',
+                    'Collectors can scan, record and redeem. Teachers are '
+                    'read-only and see their own school. Admins see every '
+                    'school. Row Level Security enforces all of this on the '
+                    'server, not just in the UI.',
                     style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: AppColors.muted, height: 1.5),
                   ),
@@ -169,19 +177,31 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   }
 
   Future<void> _createUser() async {
+    final schools = ref
+        .read(appStoreProvider)
+        .schools
+        .where((s) => s.active)
+        .toList();
+    if (schools.isEmpty) {
+      _notify('Add an active school before creating staff accounts.');
+      return;
+    }
     final input = await showDialog<_NewStaff>(
       context: context,
-      builder: (_) => const _CreateUserDialog(),
+      builder: (_) => _CreateUserDialog(schools: schools),
     );
     if (input == null || !mounted) return;
 
     if (!_live) {
+      final school = schools.firstWhere((s) => s.id == input.schoolId);
       final user = StaffUser(
         id: 'usr-${_demoUsers.length + 1}',
         name: input.name,
         email: input.email,
         role: input.role,
         active: true,
+        schoolId: input.schoolId,
+        schoolName: school.name,
       );
       setState(() {
         _demoUsers.insert(0, user);
@@ -199,6 +219,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           email: input.email,
           password: input.password,
           role: input.role,
+          schoolId: input.schoolId,
         );
     if (!mounted) return;
     setState(() => _creating = false);
@@ -222,16 +243,20 @@ class _NewStaff {
     required this.email,
     required this.password,
     required this.role,
+    required this.schoolId,
   });
 
   final String name;
   final String email;
   final String password;
   final String role;
+  final String? schoolId;
 }
 
 class _CreateUserDialog extends StatefulWidget {
-  const _CreateUserDialog();
+  const _CreateUserDialog({required this.schools});
+
+  final List<School> schools;
 
   @override
   State<_CreateUserDialog> createState() => _CreateUserDialogState();
@@ -242,8 +267,17 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  String _role = 'collector';
+  String _role = 'teacher';
+  String? _schoolId;
   bool _obscure = true;
+
+  bool get _needsSchool => _role != 'admin';
+
+  @override
+  void initState() {
+    super.initState();
+    _schoolId = widget.schools.first.id;
+  }
 
   @override
   void dispose() {
@@ -255,6 +289,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_needsSchool && _schoolId == null) return;
     Navigator.pop(
       context,
       _NewStaff(
@@ -262,6 +297,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         email: _email.text.trim().toLowerCase(),
         password: _password.text,
         role: _role,
+        schoolId: _needsSchool ? _schoolId : null,
       ),
     );
   }
@@ -281,8 +317,9 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'The account can sign in immediately. Share the temporary '
-                  'password securely and ask them to change it.',
+                  'Every teacher and collector belongs to a school before they '
+                  'can sign in. Share the temporary password securely and ask '
+                  'them to change it.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.muted,
                     height: 1.5,
@@ -346,17 +383,39 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   decoration: const InputDecoration(labelText: 'Role'),
                   items: const [
                     DropdownMenuItem(
+                      value: 'teacher',
+                      child: Text('Teacher — school history and briefs'),
+                    ),
+                    DropdownMenuItem(
                       value: 'collector',
                       child: Text('Collector — scan, record, redeem'),
                     ),
                     DropdownMenuItem(
                       value: 'admin',
-                      child: Text('Admin — full access'),
+                      child: Text('Admin — full access, all schools'),
                     ),
                   ],
                   onChanged: (value) =>
-                      setState(() => _role = value ?? 'collector'),
+                      setState(() => _role = value ?? 'teacher'),
                 ),
+                if (_needsSchool) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _schoolId,
+                    decoration: const InputDecoration(labelText: 'School'),
+                    items: [
+                      for (final school in widget.schools)
+                        DropdownMenuItem(
+                          value: school.id,
+                          child: Text(school.name),
+                        ),
+                    ],
+                    validator: (value) => value == null
+                        ? 'Choose the staff member’s school.'
+                        : null,
+                    onChanged: (value) => setState(() => _schoolId = value),
+                  ),
+                ],
               ],
             ),
           ),
@@ -412,7 +471,9 @@ class _UserRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  user.email,
+                  user.isAdmin
+                      ? user.email
+                      : '${user.email} · ${user.schoolName ?? 'No school yet'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
@@ -425,8 +486,12 @@ class _UserRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: StatusPill(
-              label: user.role.toUpperCase(),
-              color: user.isAdmin ? AppColors.forest : AppColors.sky,
+              label: user.roleLabel.toUpperCase(),
+              color: user.isAdmin
+                  ? AppColors.forest
+                  : user.isTeacher
+                  ? AppColors.sun
+                  : AppColors.sky,
             ),
           ),
           Expanded(

@@ -1,36 +1,112 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/app_store.dart';
+import '../../data/models.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
+
+  /// Widget tests cannot start a real camera plugin. The production app never
+  /// flips this flag; the manual-ID path remains available either way.
+  @visibleForTesting
+  static bool cameraDisabledForTests = false;
 
   @override
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
 }
 
 class _ScanScreenState extends ConsumerState<ScanScreen> {
+  MobileScannerController? _controller;
   bool _handling = false;
+  bool _torchOn = false;
+  String? _message;
 
-  void _found(String beneficiaryId) {
+  bool get _cameraSupported =>
+      !kIsWeb &&
+      !ScanScreen.cameraDisabledForTests &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  @override
+  void initState() {
+    super.initState();
+    if (_cameraSupported) {
+      _controller = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        formats: const [BarcodeFormat.qrCode],
+        torchEnabled: false,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
     if (_handling) return;
-    setState(() => _handling = true);
-    context.pushReplacement('/collector/beneficiary/$beneficiaryId');
+    String? raw;
+    for (final barcode in capture.barcodes) {
+      final value = barcode.rawValue;
+      if (value != null && value.trim().isNotEmpty) {
+        raw = value.trim();
+        break;
+      }
+    }
+    if (raw == null) return;
+    _lookup(raw);
+  }
+
+  Future<void> _lookup(String raw) async {
+    if (_handling) return;
+    final query = raw.trim().toUpperCase();
+    final state = ref.read(appStoreProvider);
+    Beneficiary? match;
+    for (final b in state.beneficiaries) {
+      if (b.publicId.toUpperCase() == query || b.id == raw.trim()) {
+        match = b;
+        break;
+      }
+    }
+
+    if (match == null) {
+      if (_message == query) return; // Don't spam the same failed scan.
+      setState(() {
+        _message =
+            'No card with ID “$query” in your school. Check the card or use '
+            'manual entry.';
+      });
+      return;
+    }
+
+    setState(() {
+      _handling = true;
+      _message = null;
+    });
+    await _controller?.stop();
+    if (!mounted) return;
+    context.pushReplacement('/collector/beneficiary/${match.id}');
   }
 
   void _openSampleCard() {
-    final state = ref.read(appStoreProvider);
-    if (state.beneficiaries.isEmpty) return;
-    _found(state.beneficiaries.first.id);
+    final beneficiaries = ref.read(appStoreProvider).beneficiaries;
+    if (beneficiaries.isEmpty) {
+      setState(() => _message = 'No beneficiaries are available in demo mode.');
+      return;
+    }
+    context.pushReplacement('/collector/beneficiary/${beneficiaries.first.id}');
   }
 
   void _manualEntry() {
     final controller = TextEditingController();
-    final state = ref.read(appStoreProvider);
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -46,6 +122,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               hintText: 'RL-0042-7K3Q',
               helperText: 'The last character is a check character.',
             ),
+            onSubmitted: (value) {
+              Navigator.pop(dialogContext);
+              _lookup(value);
+            },
           ),
         ),
         actions: [
@@ -55,28 +135,27 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
           ),
           FilledButton(
             onPressed: () {
-              final query = controller.text.trim().toUpperCase();
-              final match = state.beneficiaries.where(
-                (b) => b.publicId == query,
-              );
+              final value = controller.text;
               Navigator.pop(dialogContext);
-              if (match.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'No beneficiary found for that ID. Check the check character.',
-                    ),
-                  ),
-                );
-                return;
-              }
-              _found(match.first.id);
+              _lookup(value);
             },
             child: const Text('Find'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _toggleTorch() async {
+    final controller = _controller;
+    if (controller == null) return;
+    await controller.toggleTorch();
+    if (!mounted) return;
+    setState(() => _torchOn = !_torchOn);
+  }
+
+  Future<void> _switchCamera() async {
+    await _controller?.switchCamera();
   }
 
   @override
@@ -86,95 +165,169 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: const Text('Find a pupil'),
+        title: const Text('Scan a card'),
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.close),
         ),
+        actions: [
+          if (_cameraSupported) ...[
+            IconButton(
+              tooltip: _torchOn ? 'Turn torch off' : 'Turn torch on',
+              onPressed: _toggleTorch,
+              icon: Icon(_torchOn ? Icons.flashlight_on : Icons.flashlight_off),
+            ),
+            IconButton(
+              tooltip: 'Switch camera',
+              onPressed: _switchCamera,
+              icon: const Icon(Icons.cameraswitch_outlined),
+            ),
+          ],
+          const SizedBox(width: 6),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 12),
-            Text(
-              'Enter the card ID to open a pupil',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Camera scanning is not enabled in this build. Use the public ID '
-              'printed under the QR code.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.45),
-                fontSize: 11.5,
-              ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: 260,
-              height: 260,
-              child: Stack(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+              child: Column(
                 children: [
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.18),
+                  Text(
+                    'Point the camera at the QR code on the pupil’s card',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _cameraSupported
+                        ? 'The card opens as soon as the QR is read.'
+                        : 'Camera scanning needs the Android app. Use the '
+                              'public ID printed under the QR code here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.45),
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_message != null)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.danger.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 17,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        _message!,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(26),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            if (_cameraSupported && _controller != null)
+                              MobileScanner(
+                                controller: _controller,
+                                onDetect: _onDetect,
+                                errorBuilder: (context, error) =>
+                                    _CameraProblem(error: error),
+                              )
+                            else
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.04),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.12),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.qr_code_2,
+                                    size: 140,
+                                    color: Colors.white.withValues(alpha: 0.14),
+                                  ),
+                                ),
+                              ),
+                            IgnorePointer(
+                              child: Stack(
+                                children: [
+                                  const Positioned(
+                                    top: 0,
+                                    left: 0,
+                                    child: _Corner(top: true, left: true),
+                                  ),
+                                  const Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: _Corner(top: true, right: true),
+                                  ),
+                                  const Positioned(
+                                    bottom: 0,
+                                    left: 0,
+                                    child: _Corner(bottom: true, left: true),
+                                  ),
+                                  const Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: _Corner(bottom: true, right: true),
+                                  ),
+                                  if (_handling)
+                                    const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                  Positioned.fill(
-                    child: Center(
-                      child: Icon(
-                        Icons.qr_code_2,
-                        size: 150,
-                        color: Colors.white.withValues(alpha: 0.12),
-                      ),
-                    ),
-                  ),
-                  const _Corner(top: true, left: true),
-                  const _Corner(top: true, right: true),
-                  const _Corner(bottom: true, left: true),
-                  const _Corner(bottom: true, right: true),
-                ],
+                ),
               ),
             ),
-            const SizedBox(height: 28),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.videocam_outlined,
-                    size: 14,
-                    color: Colors.white70,
-                  ),
-                  SizedBox(width: 7),
-                  Flexible(
-                    child: Text(
-                      'Camera scanning is not enabled in this build',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.white70, fontSize: 11.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Spacer(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
               child: Column(
                 children: [
                   if (AppConfig.demoMode) ...[
@@ -229,6 +382,55 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   }
 }
 
+class _CameraProblem extends StatelessWidget {
+  const _CameraProblem({required this.error});
+
+  final MobileScannerException error;
+
+  @override
+  Widget build(BuildContext context) {
+    final denied = error.errorCode == MobileScannerErrorCode.permissionDenied;
+    return Container(
+      color: const Color(0xFF0B1F14),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            denied
+                ? Icons.no_photography_outlined
+                : Icons.videocam_off_outlined,
+            size: 42,
+            color: Colors.white70,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            denied ? 'Camera permission is off' : 'The camera could not start',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            denied
+                ? 'Allow camera access for ReLearn in Android settings, then '
+                      'reopen this screen. You can still enter the ID manually.'
+                : 'Use manual entry, or reopen the screen. ${error.errorCode.name}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.55),
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Corner extends StatelessWidget {
   const _Corner({
     this.top = false,
@@ -244,14 +446,10 @@ class _Corner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: top ? 0 : null,
-      bottom: bottom ? 0 : null,
-      left: left ? 0 : null,
-      right: right ? 0 : null,
+    return SizedBox(
+      width: 46,
+      height: 46,
       child: Container(
-        width: 42,
-        height: 42,
         decoration: BoxDecoration(
           border: Border(
             top: top
