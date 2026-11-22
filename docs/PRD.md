@@ -157,7 +157,7 @@ Priority: **P0** = required for the MVP demo, **P1** = important for pilot,
 | F1.4 | Bulk import beneficiaries from CSV with validation and error report | P1 | Valid rows imported; invalid rows listed with row number and reason; no partial corrupt rows |
 | F1.5 | Generate unique human-readable beneficiary ID (e.g. `RL-0042-7K3Q`) server-side, with check character and no ambiguous characters | P0 | ID unique, excludes `0/O/1/I`; check character validates |
 | F1.6 | Generate QR in-app (`qr_flutter`); QR encodes beneficiary ID only | P0 | Scanning returns exactly the public ID; no personal data in QR |
-| F1.7 | Printable PDF ID cards (school, name, QR, ID text), 8 per A4, filter by school and class | P0 | PDF opens; 8 cards per page; QR scans from print at 300 dpi |
+| F1.7 | Printable PDF ID cards (school, type, class, QR, ID text; no pupil name), 8 per A4, filter by school and class | P0 | PDF opens; 8 cards per page; QR scans from print at 300 dpi |
 | F1.8 | Reprint/replace a lost card; ID unchanged; old card valid unless blocked | P1 | Blocking a card makes scans return "card blocked"; reprint uses same ID |
 
 ### Stage 2 — Collection management

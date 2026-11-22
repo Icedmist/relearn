@@ -1138,13 +1138,24 @@ class AppStore extends Notifier<AppState> {
     final repo = _repo;
     if (repo != null) {
       try {
-        final points = await repo.recordCollection(
+        final result = await repo.recordCollection(
           beneficiaryId: beneficiaryId,
           lines: lines,
           note: note,
         );
+        _applyCollection(
+          beneficiaryId: beneficiaryId,
+          lines: lines,
+          points: result.points,
+          balance: result.balance,
+          note: note,
+          collectionId: result.collectionId,
+        );
+        // The write already succeeded. A failed refresh must not make the app
+        // report failure (or invite a duplicate retry); the local snapshot
+        // above already shows the awarded points.
         await reload(showLoading: false);
-        return points;
+        return result.points;
       } catch (error) {
         _fail(error);
         return null;
@@ -1153,12 +1164,36 @@ class AppStore extends Notifier<AppState> {
 
     final beneficiary = state.beneficiaryById(beneficiaryId);
     if (beneficiary == null) return null;
+    final total = _linePoints(lines);
+    _applyCollection(
+      beneficiaryId: beneficiaryId,
+      lines: lines,
+      points: total,
+      balance: beneficiary.balance + total,
+      note: note,
+    );
+    return total;
+  }
 
-    var total = 0;
+  int _linePoints(List<({MaterialItem material, double quantity})> lines) =>
+      lines.fold(
+        0,
+        (sum, line) =>
+            sum + (line.quantity * line.material.pointsPerUnit).round(),
+      );
+
+  void _applyCollection({
+    required String beneficiaryId,
+    required List<({MaterialItem material, double quantity})> lines,
+    required int points,
+    required int balance,
+    String? note,
+    String? collectionId,
+  }) {
+    if (state.beneficiaryById(beneficiaryId) == null) return;
+
     final parts = <String>[];
     for (final line in lines) {
-      final points = (line.quantity * line.material.pointsPerUnit).round();
-      total += points;
       final qty = line.material.unit == MaterialUnit.kg
           ? '${line.quantity.toStringAsFixed(line.quantity % 1 == 0 ? 0 : 2)} kg'
           : '${line.quantity.toInt()} pcs';
@@ -1166,39 +1201,36 @@ class AppStore extends Notifier<AppState> {
     }
 
     final now = DateTime.now();
-    final id = 'col-${state.collections.length + 1}';
+    final stamp = now.microsecondsSinceEpoch;
+    final summary = parts.join(' + ');
     final collection = CollectionRecord(
-      id: id,
+      id: collectionId ?? 'local-col-$stamp',
       beneficiaryId: beneficiaryId,
       collectorName: state.profile?.name ?? 'Staff',
-      summary: parts.join(' + '),
+      summary: summary,
       kg: lines
           .where((l) => l.material.unit == MaterialUnit.kg)
           .fold(0.0, (s, l) => s + l.quantity),
-      points: total,
+      points: points,
       at: now,
     );
     final entry = LedgerEntry(
-      id: 'led-${state.ledger.length + 1}',
+      id: 'local-led-$stamp',
       beneficiaryId: beneficiaryId,
       type: LedgerType.earn,
-      points: total,
+      points: points,
       at: now,
-      note: note == null || note.isEmpty ? collection.summary : note,
+      note: note == null || note.isEmpty ? summary : note,
     );
 
     state = state.copyWith(
       beneficiaries: [
         for (final b in state.beneficiaries)
-          if (b.id == beneficiaryId)
-            b.copyWith(balance: b.balance + total)
-          else
-            b,
+          if (b.id == beneficiaryId) b.copyWith(balance: balance) else b,
       ],
       collections: [collection, ...state.collections],
       ledger: [entry, ...state.ledger],
     );
-    return total;
   }
 
   /// Returns an error message, or null on success.
@@ -1269,19 +1301,48 @@ class AppStore extends Notifier<AppState> {
     return null;
   }
 
-  void adjustPoints(String beneficiaryId, int points, String reason) {
+  /// Returns null on success, or a human-readable error message.
+  Future<String?> adjustPoints(
+    String beneficiaryId,
+    int points,
+    String reason,
+  ) async {
+    final repo = _repo;
+    if (repo == null) {
+      _applyAdjustment(beneficiaryId, points, reason);
+      return null;
+    }
+    try {
+      final balance = await repo.adjustPoints(beneficiaryId, points, reason);
+      _applyAdjustment(beneficiaryId, points, reason, balance: balance);
+      await reload(showLoading: false);
+      return null;
+    } catch (error) {
+      _fail(error);
+      return _message(error);
+    }
+  }
+
+  void _applyAdjustment(
+    String beneficiaryId,
+    int points,
+    String reason, {
+    int? balance,
+  }) {
+    final beneficiary = state.beneficiaryById(beneficiaryId);
+    if (beneficiary == null) return;
     final now = DateTime.now();
     state = state.copyWith(
       beneficiaries: [
         for (final b in state.beneficiaries)
           if (b.id == beneficiaryId)
-            b.copyWith(balance: b.balance + points)
+            b.copyWith(balance: balance ?? b.balance + points)
           else
             b,
       ],
       ledger: [
         LedgerEntry(
-          id: 'led-${state.ledger.length + 1}',
+          id: 'local-led-${now.microsecondsSinceEpoch}',
           beneficiaryId: beneficiaryId,
           type: LedgerType.adjust,
           points: points,
@@ -1291,8 +1352,6 @@ class AppStore extends Notifier<AppState> {
         ...state.ledger,
       ],
     );
-    final repo = _repo;
-    if (repo != null) _write(repo.adjustPoints(beneficiaryId, points, reason));
   }
 }
 

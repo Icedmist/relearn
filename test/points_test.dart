@@ -73,6 +73,19 @@ void main() {
     );
   });
 
+  test('an admin adjustment updates the balance and ledger', () async {
+    final store = container.read(appStoreProvider.notifier);
+    final before = container.read(appStoreProvider).beneficiaryById('ben-1')!;
+
+    final error = await store.adjustPoints('ben-1', 25, 'Pilot correction');
+
+    final after = container.read(appStoreProvider);
+    expect(error, isNull);
+    expect(after.beneficiaryById('ben-1')!.balance, before.balance + 25);
+    expect(after.ledgerFor('ben-1').first.type, LedgerType.adjust);
+    expect(after.ledgerFor('ben-1').first.points, 25);
+  });
+
   test('disallowed materials stay out of the collector picker', () {
     final state = container.read(appStoreProvider);
     final allowed = state.materials

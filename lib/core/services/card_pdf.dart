@@ -9,8 +9,9 @@ import '../../data/models.dart';
 /// Builds printable A4 sheets of beneficiary cards.
 ///
 /// Each sheet holds eight cards (two columns by four rows). The QR contains
-/// only the public ID, and every card repeats the pupil, class, school and ID
-/// so a damaged QR can still be keyed in by hand.
+/// only the public ID. Cards deliberately omit the beneficiary's name so a lost
+/// card does not expose a pupil's identity; the public ID, type, class and
+/// school are still printed so a damaged QR can be keyed in by hand.
 abstract final class CardPdf {
   static const _forest = PdfColor.fromInt(0xFF123B2A);
   static const _leaf = PdfColor.fromInt(0xFF2E9E5B);
@@ -19,12 +20,19 @@ abstract final class CardPdf {
   static const _cream = PdfColor.fromInt(0xFFF7F4EA);
 
   static const _cardsPerPage = 8;
-  static const _cardWidth = 93 * PdfPageFormat.mm;
-  static const _cardHeight = 62 * PdfPageFormat.mm;
+  static const _columns = 2;
+  static const _gap = 4 * PdfPageFormat.mm;
+
+  // A4 has 190 mm of usable width after the 10 mm margins. Two 90 mm cards
+  // plus the gap fit with room to spare; the previous 93 mm width rounded over
+  // the edge and silently collapsed the grid to one card per row.
+  static const _cardWidth = 90 * PdfPageFormat.mm;
+  static const _cardHeight = 60 * PdfPageFormat.mm;
 
   static Future<Uint8List> build({
     required List<Beneficiary> beneficiaries,
     required String schoolName,
+    bool compress = true,
   }) async {
     if (beneficiaries.isEmpty) {
       throw ArgumentError('Select at least one beneficiary.');
@@ -34,6 +42,7 @@ abstract final class CardPdf {
       title: 'ReLearn cards - $schoolName',
       author: 'ReLearn',
       creator: 'ReLearn',
+      compress: compress,
     );
 
     for (var start = 0; start < beneficiaries.length; start += _cardsPerPage) {
@@ -50,14 +59,7 @@ abstract final class CardPdf {
             children: [
               _header(schoolName),
               pw.SizedBox(height: 4 * PdfPageFormat.mm),
-              pw.Wrap(
-                spacing: 4 * PdfPageFormat.mm,
-                runSpacing: 4 * PdfPageFormat.mm,
-                children: [
-                  for (final beneficiary in chunk)
-                    _card(beneficiary, schoolName),
-                ],
-              ),
+              _grid(chunk, schoolName),
             ],
           ),
         ),
@@ -65,6 +67,31 @@ abstract final class CardPdf {
     }
 
     return document.save();
+  }
+
+  /// Lays cards out in fixed rows of two. A plain wrap depended on floating
+  /// point widths and lost every card once the overflow passed the page edge.
+  static pw.Widget _grid(List<Beneficiary> cards, String schoolName) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < cards.length; i += _columns)
+          pw.Padding(
+            padding: pw.EdgeInsets.only(
+              bottom: i + _columns < cards.length ? _gap : 0,
+            ),
+            child: pw.Row(
+              children: [
+                _card(cards[i], schoolName),
+                if (i + 1 < cards.length) ...[
+                  pw.SizedBox(width: _gap),
+                  _card(cards[i + 1], schoolName),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
   }
 
   static pw.Widget _header(String schoolName) {
@@ -165,7 +192,7 @@ abstract final class CardPdf {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        beneficiary.name,
+                        '$type card',
                         maxLines: 1,
                         overflow: pw.TextOverflow.clip,
                         style: pw.TextStyle(
@@ -176,7 +203,7 @@ abstract final class CardPdf {
                       ),
                       pw.SizedBox(height: 0.6 * PdfPageFormat.mm),
                       pw.Text(
-                        '$type - ${beneficiary.className}',
+                        beneficiary.className,
                         maxLines: 1,
                         overflow: pw.TextOverflow.clip,
                         style: pw.TextStyle(color: _muted, fontSize: 7.5),

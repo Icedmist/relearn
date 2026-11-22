@@ -6,6 +6,23 @@ All notable changes to ReLearn are documented here. Format follows
 
 ## [Unreleased]
 
+### Fixed
+- Card PDFs now render the full 8-card grid. The previous 93 mm card width
+  rounded past the printable area, collapsed the grid to one card per row and
+  produced blank sheets whenever a batch had more than four cards.
+- A successful collection or points adjustment is no longer reported as a
+  failure when the follow-up data refresh fails. The server result updates the
+  local snapshot immediately, and the admin adjustment dialog now waits for the
+  write and shows any server error instead of closing silently.
+- Zero-point collections are rejected with a clear message instead of failing
+  on the append-only ledger's `points <> 0` constraint.
+
+### Changed
+- Printed cards no longer include the beneficiary's name. The public ID, type,
+  class and school remain so a damaged QR can still be keyed in manually.
+- Migration `0008_harden_points.sql` makes the balance-view grant explicit,
+  serialises collections per beneficiary and records a readable ledger note.
+
 ### Planned
 - Stage 2: camera scanning, offline queue, sync status.
 - Stage 3: PDF card export and printable batches.

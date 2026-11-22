@@ -273,7 +273,7 @@ class SupabaseRepository {
     return ((result as Map)['stock'] as num).toInt();
   }
 
-  Future<int> recordCollection({
+  Future<({String collectionId, int points, int balance})> recordCollection({
     required String beneficiaryId,
     required List<({MaterialItem material, double quantity})> lines,
     String? note,
@@ -290,7 +290,12 @@ class SupabaseRepository {
         'p_note': note,
       },
     );
-    return ((result as Map)['points'] as num).toInt();
+    final data = result as Map;
+    return (
+      collectionId: '${data['collection_id']}',
+      points: (data['points'] as num).toInt(),
+      balance: (data['balance'] as num).toInt(),
+    );
   }
 
   /// Returns null on success or a human-readable error message.
@@ -317,12 +322,12 @@ class SupabaseRepository {
     }
   }
 
-  Future<void> adjustPoints(
+  Future<int> adjustPoints(
     String beneficiaryId,
     int points,
     String reason,
   ) async {
-    await _client.rpc(
+    final result = await _client.rpc(
       'adjust_points',
       params: {
         'p_beneficiary_id': beneficiaryId,
@@ -330,6 +335,7 @@ class SupabaseRepository {
         'p_reason': reason,
       },
     );
+    return ((result as Map)['balance'] as num).toInt();
   }
 
   /// Creates a staff account through Supabase Auth, then assigns its role.

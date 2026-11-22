@@ -263,9 +263,10 @@ Android biometric support needs `FlutterFragmentActivity`, the
 4. Tap **Export PDF**. ReLearn builds the PDF locally and opens the system
    print dialog; choose a printer or “Save as PDF”.
 
-The sheet holds eight cards on A4. Every card includes the pupil name, type,
-class, school and public ID, plus a QR code that contains only the public ID.
-The QR is printed at 25 mm so it stays readable on cheap printers.
+The sheet holds eight cards on A4. For privacy, cards never print the pupil's
+name: each card shows the type, class, school and public ID, plus a QR code that
+contains only the public ID. The QR is printed at 25 mm so it stays readable on
+cheap printers.
 
 You can also print one card from a beneficiary profile with **Print card**.
 

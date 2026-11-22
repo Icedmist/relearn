@@ -85,7 +85,7 @@ class _PrintCardsScreenState extends ConsumerState<PrintCardsScreen> {
         PageHeader(
           eyebrow: 'Identification',
           title: 'Print cards',
-          subtitle: 'Eight cards per A4 page. QR encodes the public ID only.',
+          subtitle: 'Eight cards per A4 page. The QR and card print the public ID only — no pupil names.',
           actions: [
             OutlinedButton.icon(
               onPressed: () => setState(() {
@@ -185,7 +185,8 @@ class _PrintCardsScreenState extends ConsumerState<PrintCardsScreen> {
                   const SizedBox(height: 16),
                   const Divider(),
                   const SizedBox(height: 12),
-                  _checkLine('School name and class printed'),
+                  _checkLine('No beneficiary name printed'),
+                  _checkLine('School and class printed'),
                   _checkLine('Public ID in tabular text'),
                   _checkLine('QR quiet zone preserved'),
                   _checkLine('8 cards per A4 sheet'),
@@ -355,7 +356,7 @@ class _CardPreview extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            beneficiary.name,
+                            '${beneficiary.type.label} card',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -365,7 +366,7 @@ class _CardPreview extends StatelessWidget {
                           ),
                           const SizedBox(height: 1),
                           Text(
-                            '${beneficiary.type.label} · ${beneficiary.className}',
+                            beneficiary.className,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(

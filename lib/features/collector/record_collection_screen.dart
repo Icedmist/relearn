@@ -20,6 +20,7 @@ class RecordCollectionScreen extends ConsumerStatefulWidget {
 class _RecordCollectionScreenState
     extends ConsumerState<RecordCollectionScreen> {
   final List<({MaterialItem material, double quantity})> _lines = [];
+  bool _saving = false;
 
   @override
   void initState() {
@@ -106,17 +107,20 @@ class _RecordCollectionScreenState
   }
 
   Future<void> _confirm() async {
+    if (_saving) return;
     if (_lines.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Add at least one material line.')),
       );
       return;
     }
+    setState(() => _saving = true);
     final points = await ref
         .read(appStoreProvider.notifier)
         .recordCollection(beneficiaryId: widget.beneficiaryId, lines: _lines);
     if (!mounted) return;
     if (points == null) {
+      setState(() => _saving = false);
       final error =
           ref.read(appStoreProvider).error ??
           'Could not record the collection. Try again.';
@@ -331,11 +335,20 @@ class _RecordCollectionScreenState
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _confirm,
+                  onPressed: _saving ? null : _confirm,
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 56)),
-                  child: Text(
-                    'Confirm collection · +${formatPoints(_total)} pts',
-                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Confirm collection · +${formatPoints(_total)} pts',
+                        ),
                 ),
               ),
             ),

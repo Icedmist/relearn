@@ -37,6 +37,36 @@ void main() {
     expect(latin1.decode(bytes.take(5).toList()), '%PDF-');
   });
 
+  test('eight cards render on one A4 page without pupil names', () async {
+    final beneficiaries = [
+      for (var i = 0; i < 8; i++)
+        Beneficiary(
+          id: 'ben-$i',
+          publicId: 'RL-${(i + 40).toString().padLeft(4, '0')}-7K3Q',
+          schoolId: 'sch-1',
+          name: 'Pupil Name $i',
+          type: BeneficiaryType.pupil,
+          className: 'Primary 5',
+          balance: 0,
+        ),
+    ];
+
+    // Uncompressed output lets the test inspect the actual text drawn on the
+    // sheet, which is how we verify the grid does not collapse to a blank page.
+    final bytes = await CardPdf.build(
+      beneficiaries: beneficiaries,
+      schoolName: 'Gombe Model Primary School',
+      compress: false,
+    );
+    final text = String.fromCharCodes(bytes);
+
+    expect(latin1.decode(bytes.take(5).toList()), '%PDF-');
+    for (final beneficiary in beneficiaries) {
+      expect(text, contains(beneficiary.publicId));
+    }
+    expect(text, isNot(contains('Pupil Name')));
+  });
+
   test('card PDF rejects an empty selection', () async {
     await expectLater(
       CardPdf.build(beneficiaries: const [], schoolName: 'School'),

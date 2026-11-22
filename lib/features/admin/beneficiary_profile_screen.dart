@@ -220,6 +220,7 @@ class BeneficiaryProfileScreen extends ConsumerWidget {
     final points = TextEditingController();
     final reason = TextEditingController();
     String? error;
+    var saving = false;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -235,6 +236,7 @@ class BeneficiaryProfileScreen extends ConsumerWidget {
                   keyboardType: const TextInputType.numberWithOptions(
                     signed: true,
                   ),
+                  enabled: !saving,
                   decoration: const InputDecoration(
                     labelText: 'Points (+ or −)',
                     hintText: 'e.g. 50 or -20',
@@ -244,6 +246,7 @@ class BeneficiaryProfileScreen extends ConsumerWidget {
                 TextField(
                   controller: reason,
                   maxLines: 2,
+                  enabled: !saving,
                   decoration: const InputDecoration(
                     labelText: 'Reason (required)',
                     hintText: 'Why is this adjustment needed?',
@@ -264,29 +267,68 @@ class BeneficiaryProfileScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: saving ? null : () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                final value = int.tryParse(points.text.trim());
-                if (value == null || value == 0) {
-                  setState(() => error = 'Enter a non-zero number of points.');
-                  return;
-                }
-                if (reason.text.trim().length < 5) {
-                  setState(
-                    () => error =
-                        'A reason of at least 5 characters is required.',
-                  );
-                  return;
-                }
-                ref
-                    .read(appStoreProvider.notifier)
-                    .adjustPoints(beneficiary.id, value, reason.text.trim());
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Post adjustment'),
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final value = int.tryParse(points.text.trim());
+                      if (value == null || value == 0) {
+                        setState(
+                          () => error = 'Enter a non-zero number of points.',
+                        );
+                        return;
+                      }
+                      if (reason.text.trim().length < 5) {
+                        setState(
+                          () => error =
+                              'A reason of at least 5 characters is required.',
+                        );
+                        return;
+                      }
+
+                      setState(() {
+                        saving = true;
+                        error = null;
+                      });
+                      final failure = await ref
+                          .read(appStoreProvider.notifier)
+                          .adjustPoints(
+                            beneficiary.id,
+                            value,
+                            reason.text.trim(),
+                          );
+                      if (!dialogContext.mounted) return;
+                      if (failure != null) {
+                        setState(() {
+                          saving = false;
+                          error = failure;
+                        });
+                        return;
+                      }
+                      Navigator.pop(dialogContext);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${value > 0 ? 'Added' : 'Removed'} '
+                            '${formatPoints(value.abs())} points.',
+                          ),
+                        ),
+                      );
+                    },
+              child: saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Post adjustment'),
             ),
           ],
         ),

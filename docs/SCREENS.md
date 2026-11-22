@@ -248,8 +248,9 @@ public ID never changes; no delete anywhere.
 - Filters: school (defaults to the first school), class (optional).
 - Card previews with select-all; an empty selection means every filtered card.
 - A4 preview of the first 12 filtered cards.
-- Card face: ReLearn mark, school name, beneficiary name, type, class, public
-  ID, 25 mm QR and "This card belongs to your school. Return it if found."
+- Card face: ReLearn mark, school name, type, class, public ID, 25 mm QR and
+  "This card belongs to your school. Return it if found." The beneficiary's
+  name is deliberately omitted for privacy.
 - "Export PDF" builds an eight-cards-per-A4-sheet PDF locally and opens the
   system print/save dialog via `printing`.
 
